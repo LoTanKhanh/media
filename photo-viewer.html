@@ -1,0 +1,3207 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline Media Viewer (Photo & Video)</title>
+  <style>
+    :root {
+      --bg-color: #0d0d0f;
+      --card-bg: #18181b;
+      --card-hover: #27272a;
+      --text-main: #f4f4f5;
+      --text-sub: #a1a1aa;
+      --accent: #0a84ff;
+      --accent-hover: #0071e3;
+      --danger: #ff453a;
+      --danger-hover: #ff6961;
+      --border-color: #27272a;
+      --topbar-height: 58px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Main Top Toolbar */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: var(--topbar-height);
+      background-color: rgba(20, 20, 24, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      gap: 12px;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+
+    header.hidden-bar {
+      transform: translateY(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+    }
+
+    .brand svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--accent);
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      position: relative;
+    }
+
+    .btn:hover {
+      background-color: var(--card-hover);
+      border-color: #3f3f46;
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-danger {
+      background-color: rgba(255, 69, 58, 0.15);
+      border-color: rgba(255, 69, 58, 0.3);
+      color: #ff6961;
+    }
+
+    .btn-danger:hover {
+      background-color: rgba(255, 69, 58, 0.25);
+      border-color: rgba(255, 69, 58, 0.5);
+      color: #fff;
+    }
+
+    /* Dropdown Component */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background-color: #1f1f23;
+      border: 1px solid #333338;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      min-width: 195px;
+      padding: 6px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 120;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .dropdown-menu.show {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text-main);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.12s ease;
+      user-select: none;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--card-hover);
+      color: #fff;
+    }
+
+    .dropdown-item svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--text-sub);
+    }
+
+    .dropdown-item:hover svg {
+      fill: var(--accent);
+    }
+
+    .dropdown-item.active {
+      background-color: rgba(10, 132, 255, 0.15);
+      color: #fff;
+    }
+
+    .dropdown-item.active svg {
+      fill: var(--accent);
+    }
+
+    .mode-icon-wrap svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    #lb-video-mode-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .search-box {
+      background-color: #1f1f23;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      width: 140px;
+      transition: width 0.2s ease, border-color 0.2s ease;
+    }
+
+    .search-box:focus {
+      border-color: var(--accent);
+      width: 190px;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .slider-container input[type="range"] {
+      width: 65px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    select.select-box {
+      background-color: #1f1f23;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #toggle-header-btn {
+      position: fixed;
+      top: 14px;
+      right: 16px;
+      z-index: 101;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    header.hidden-bar ~ #toggle-header-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Main Layout & Album Sidebar */
+    .app-layout {
+      flex: 1;
+      display: flex;
+      min-height: calc(100vh - var(--topbar-height));
+      position: relative;
+    }
+
+    .album-sidebar {
+      width: 250px;
+      min-width: 250px;
+      background-color: #121215;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 12px;
+      gap: 16px;
+      transition: width 0.22s ease, padding 0.22s ease, opacity 0.2s ease;
+      overflow-y: auto;
+      user-select: none;
+    }
+
+    .album-sidebar.collapsed {
+      width: 0;
+      min-width: 0;
+      padding: 0;
+      opacity: 0;
+      overflow: hidden;
+      border-right: none;
+    }
+
+    .sidebar-section {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 8px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: var(--text-sub);
+      text-transform: uppercase;
+    }
+
+    .btn-icon-subtle {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-icon-subtle:hover {
+      background-color: var(--card-hover);
+      color: #fff;
+    }
+
+    .btn-icon-subtle svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .album-nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .album-nav-item:hover {
+      background-color: var(--card-hover);
+      color: var(--text-main);
+    }
+
+    .album-nav-item.active {
+      background-color: rgba(10, 132, 255, 0.16);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .album-nav-item.active svg {
+      fill: var(--accent);
+    }
+
+    .album-nav-item.drag-target-hover {
+      background-color: rgba(10, 132, 255, 0.3) !important;
+      outline: 2px dashed var(--accent);
+      outline-offset: -2px;
+      color: #fff;
+    }
+
+    .album-item-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .album-item-left svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex-shrink: 0;
+    }
+
+    .album-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .album-badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 7px;
+      border-radius: 10px;
+      color: var(--text-sub);
+    }
+
+    .album-nav-item.active .album-badge {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .content-area {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .album-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .album-title-group h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .album-meta-text {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-top: 3px;
+      display: block;
+    }
+
+    .album-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Selection & Drag styles on cards */
+    .card-select-btn {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55);
+      border: 2px solid rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: all 0.15s ease;
+      z-index: 10;
+    }
+
+    .card-select-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: transparent;
+      transition: fill 0.12s ease;
+    }
+
+    .image-card:hover .card-select-btn,
+    body.selecting-mode .card-select-btn,
+    .image-card.selected .card-select-btn {
+      opacity: 1;
+    }
+
+    .image-card.selected .card-select-btn {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .image-card.selected .card-select-btn svg {
+      fill: #fff;
+    }
+
+    .image-card.selected {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .image-card.dragging {
+      opacity: 0.45;
+      transform: scale(0.97);
+    }
+
+    /* Floating Batch Action Bar */
+    .batch-bar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(24, 24, 28, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+      padding: 9px 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+      white-space: nowrap;
+    }
+
+    .batch-bar.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .batch-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .batch-badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      min-width: 22px;
+      height: 22px;
+      border-radius: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 6px;
+    }
+
+    .batch-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      border: 2px dashed var(--border-color);
+      border-radius: 16px;
+      margin: 12px;
+      padding: 40px;
+      text-align: center;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    #empty-state.dragover {
+      border-color: var(--accent);
+      background-color: rgba(10, 132, 255, 0.05);
+    }
+
+    #empty-state svg {
+      width: 60px;
+      height: 60px;
+      fill: var(--text-sub);
+      margin-bottom: 16px;
+    }
+
+    #empty-state h2 {
+      font-size: 20px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    #empty-state p {
+      color: var(--text-sub);
+      font-size: 14px;
+      max-width: 500px;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .folder-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* Gallery Grid */
+    #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--thumb-size, 200px), 1fr));
+      gap: 16px;
+    }
+
+    .image-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      position: relative;
+    }
+
+    .image-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      border-color: #3f3f46;
+    }
+
+    .thumb-wrapper {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      background-color: #141416;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .thumb-wrapper img, .thumb-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.2s ease;
+    }
+
+    .image-card:hover .thumb-wrapper img,
+    .image-card:hover .thumb-wrapper video {
+      transform: scale(1.03);
+    }
+
+    
+    .video-placeholder-icon {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1c1c20 0%, #111114 100%);
+      color: rgba(255, 255, 255, 0.45);
+      transition: opacity 0.25s ease;
+      z-index: 1;
+    }
+    .video-placeholder-icon svg {
+      width: 42px;
+      height: 42px;
+      fill: currentColor;
+    }
+    .thumb-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.3s ease;
+      position: relative;
+      z-index: 2;
+    }
+
+    .video-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      color: #fff;
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .video-badge svg {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+
+    .card-meta {
+      padding: 9px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Lightbox Modal (Full 100% Viewport, Zero Margins, Bottom Clear) */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background-color: #000;
+      display: none;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    #lightbox.active {
+      display: block;
+    }
+
+    .lightbox-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      color: var(--text-sub);
+      font-size: 13px;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.35) 70%, transparent 100%);
+      z-index: 30;
+      opacity: 1;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      pointer-events: none;
+    }
+
+    .lightbox-header.ui-hidden {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    .lightbox-header > * {
+      pointer-events: auto;
+    }
+
+    .lightbox-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 32%;
+    }
+
+    .lightbox-title {
+      color: #fff;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+    }
+
+    .lightbox-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .zoom-slider-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(24, 24, 28, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 4px 10px;
+      height: 38px;
+    }
+
+    .zoom-slider-box input[type="range"] {
+      width: 90px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .zoom-badge {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      min-width: 44px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .icon-btn {
+      background: rgba(24, 24, 28, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #fff;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .icon-btn.btn-delete-item {
+      color: #ff6961;
+      border-color: rgba(255, 69, 58, 0.3);
+    }
+
+    .icon-btn.btn-delete-item:hover {
+      background: rgba(255, 69, 58, 0.25);
+      color: #fff;
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    /* Lightbox Viewport: 100vw x 100vh, zero margins */
+    .lightbox-body {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: default;
+    }
+
+    .lightbox-body.panning {
+      cursor: grab;
+    }
+
+    .lightbox-body.panning:active {
+      cursor: grabbing;
+    }
+
+    .lightbox-body.hide-cursor {
+      cursor: none;
+    }
+
+    .lightbox-media-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .lightbox-media-container img,
+    .lightbox-media-container video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: contain;
+      transform-origin: center center;
+      transition: transform 0.08s ease-out;
+      will-change: transform;
+    }
+
+    .lightbox-media-container video {
+      outline: none;
+    }
+
+    /* Navigation Chevrons */
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background-color: rgba(20, 20, 25, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: opacity 0.35s ease, transform 0.2s ease, background-color 0.2s ease;
+      z-index: 25;
+    }
+
+    .nav-btn.ui-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .nav-btn:hover {
+      background-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-50%) scale(1.08);
+    }
+
+    .nav-btn.prev { left: 16px; }
+    .nav-btn.next { right: 16px; }
+
+    /* Help Overlay Modal (Phím tắt ?) */
+    .help-modal {
+      position: absolute;
+      top: 74px;
+      right: 24px;
+      width: 320px;
+      background: rgba(24, 24, 28, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+      padding: 16px 18px;
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .help-modal.active {
+      display: flex;
+    }
+
+    .help-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 10px;
+    }
+
+    .help-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .help-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .help-close-btn:hover {
+      color: #fff;
+    }
+
+    .help-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      color: #ddd;
+    }
+
+    .help-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .help-row span {
+      color: var(--text-sub);
+      text-align: right;
+    }
+
+    kbd {
+      background: rgba(50, 50, 55, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 11px;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(30, 30, 35, 0.94);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      padding: 9px 20px;
+      border-radius: 22px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 2000;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  
+    /* Mobile & Tablet Responsiveness (iPhone / iPad) */
+    @media (max-width: 768px) {
+      header {
+        padding: 8px 12px;
+        flex-wrap: wrap;
+        height: auto;
+      }
+      .controls-group {
+        width: 100%;
+        overflow-x: auto;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .album-sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 150;
+        box-shadow: 4px 0 25px rgba(0, 0, 0, 0.7);
+        transform: translateX(0);
+        transition: transform 0.25s ease;
+      }
+      .album-sidebar.collapsed {
+        transform: translateX(-100%);
+        width: 250px !important;
+        min-width: 250px !important;
+        padding: 16px 12px !important;
+        opacity: 1 !important;
+      }
+      .content-area {
+        padding: 14px 10px;
+      }
+      .zoom-slider-box {
+        display: none !important;
+      }
+      .lightbox-header {
+        padding: 0 10px;
+        height: 52px;
+      }
+      .lightbox-info {
+        max-width: 45%;
+      }
+      .nav-btn {
+        width: 40px;
+        height: 40px;
+      }
+      .nav-btn.prev { left: 8px; }
+      .nav-btn.next { right: 8px; }
+      .batch-bar {
+        width: 92%;
+        padding: 8px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Gallery Top Toolbar -->
+  <header id="main-header">
+    <div class="brand" style="display:flex;align-items:center;gap:10px;">
+      <button id="btn-toggle-sidebar" class="btn" style="padding:5px 8px;" title="Ẩn/Hiện danh sách Album (B)">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
+      <svg style="width:20px;height:20px;fill:var(--accent);" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+      <span>Mac Media Viewer</span>
+    </div>
+
+    <div class="controls-group">
+      <input type="text" id="search-input" class="search-box" placeholder="Tìm tên..." />
+
+      <select id="type-filter" class="select-box">
+        <option value="all">Tất cả file</option>
+        <option value="photo">Chỉ ảnh</option>
+        <option value="video">Chỉ video</option>
+      </select>
+      
+      <select id="sort-select" class="select-box">
+        <option value="name-asc">Tên (A → Z)</option>
+        <option value="name-desc">Tên (Z → A)</option>
+        <option value="date-desc">Mới nhất trước</option>
+        <option value="date-asc">Cũ nhất trước</option>
+        <option value="size-desc">Dung lượng lớn nhất</option>
+      </select>
+
+      <div class="slider-container" title="Kích thước thumbnail">
+        <span>Cỡ:</span>
+        <input type="range" id="size-slider" min="140" max="340" value="200" />
+      </div>
+
+      <!-- Dropdown Mở Media -->
+      <div class="dropdown">
+        <button id="open-dropdown-btn" class="btn btn-primary" title="Mở ảnh hoặc video">
+          <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+          <span>Mở Media</span>
+          <svg style="width:12px;height:12px;fill:currentColor;margin-left:2px;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <div id="open-dropdown-menu" class="dropdown-menu">
+          <div class="dropdown-item" id="menu-select-folder">
+            <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            <span>📁 Thêm cả Folder</span>
+          </div>
+          <div class="dropdown-item" id="menu-select-files">
+            <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z"/></svg>
+            <span>🖼️ Thêm File cụ thể</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dedicated Clear All Button -->
+      <button id="btn-clear-all" class="btn btn-danger" title="Xóa toàn bộ ảnh/video đang lưu">
+        <svg style="width:15px;height:15px;fill:currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        <span>Xóa tất cả</span>
+      </button>
+
+      <button id="btn-fullscreen-main" class="btn" title="Toàn màn hình (F)">
+        <svg style="width:15px;height:15px;fill:currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        <span>Toàn Màn Hình</span>
+      </button>
+
+      <button id="hide-header-btn" class="btn" title="Ẩn thanh công cụ này (T)">
+        <svg style="width:14px;height:14px;fill:currentColor" viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+        <span>Ẩn thanh</span>
+      </button>
+
+      <input type="file" id="dir-input" webkitdirectory directory multiple style="display:none;" />
+      <input type="file" id="file-input" multiple accept="image/*,video/*" style="display:none;" />
+    </div>
+  </header>
+
+  <button id="toggle-header-btn" class="btn btn-primary" title="Hiện lại thanh công cụ">
+    <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+    <span>Hiện công cụ</span>
+  </button>
+
+    <div class="app-layout">
+    <!-- Album Sidebar -->
+    <aside id="album-sidebar" class="album-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span>Thư viện</span>
+        </div>
+        <div class="album-nav-item active" id="album-nav-all" data-album-id="all">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+            <span class="album-name">Tất cả file</span>
+          </div>
+          <span class="album-badge" id="badge-count-all">0</span>
+        </div>
+
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span>Album của bạn</span>
+          <button id="btn-create-album" class="btn-icon-subtle" title="Tạo Album mới">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </button>
+        </div>
+        <div id="custom-albums-list" style="display:flex;flex-direction:column;gap:3px;">
+          <!-- Custom albums rendered by JS -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+      <!-- Album Banner Bar -->
+      <div id="album-header-bar" class="album-header-bar">
+        <div class="album-title-group">
+          <h1>
+            <svg style="width:22px;height:22px;fill:var(--accent);" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            <span id="current-album-name-text">Tất cả file</span>
+          </h1>
+          <span id="current-album-meta" class="album-meta-text">0 file</span>
+        </div>
+        <div class="album-actions-group">
+          <!-- Nút Phát tất cả trong album -->
+          <button id="btn-play-all" class="btn btn-primary" title="Phát tất cả file trong album này">
+            <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <span>Phát tất cả</span>
+          </button>
+
+          <!-- Nút chọn nhiều -->
+          <button id="btn-toggle-select" class="btn" title="Chọn nhiều file để phát hoặc quản lý">
+            <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <span>Chọn nhiều</span>
+          </button>
+
+          <!-- Nút đổi tên & xóa album -->
+          <button id="btn-rename-album" class="btn" style="display:none;" title="Đổi tên album">
+            <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <span>Đổi tên</span>
+          </button>
+          <button id="btn-delete-album" class="btn btn-danger" style="display:none;" title="Xóa album này (file sẽ chuyển về Chưa phân loại)">
+            <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span>Xóa Album</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="empty-state">
+        <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z"/></svg>
+        <h2 id="empty-state-title">Chưa có file nào được lưu</h2>
+        <p id="empty-state-desc">Bấm chọn thư mục hoặc file để bắt đầu xem. Các file sẽ được <b>tự động ghi nhớ trên trình duyệt</b>, lần sau mở lại web sẽ tự hiện lên ngay!</p>
+        
+        <div class="folder-buttons" id="empty-folder-buttons">
+          <button class="btn btn-primary" id="btn-empty-folder">
+            <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            Chọn Cả Folder
+          </button>
+          <button class="btn" id="btn-empty-files">
+            Chọn File Cụ Thể
+          </button>
+        </div>
+      </div>
+
+      <div id="gallery" style="display:none;"></div>
+    </main>
+  </div>
+
+  <!-- Floating Multi-Selection Action Bar -->
+  <div id="batch-action-bar" class="batch-bar">
+    <div class="batch-info">
+      <span id="batch-count-badge" class="batch-badge">0</span>
+      <span id="batch-text">Đã chọn 0 file</span>
+    </div>
+    <div class="batch-actions">
+      <!-- Nút phát các file đã chọn -->
+      <button id="btn-batch-play" class="btn btn-primary" title="Phát các file đang chọn">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <span>Phát các file đã chọn</span>
+      </button>
+
+      <div class="dropdown" id="batch-album-dropdown">
+        <button id="btn-batch-album" class="btn" title="Chuyển các file đã chọn vào album">
+          <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+          <span>Chuyển vào Album ▾</span>
+        </button>
+        <div id="batch-album-menu" class="dropdown-menu" style="min-width:200px;"></div>
+      </div>
+
+      <button id="btn-batch-delete" class="btn btn-danger" title="Xóa các file đang chọn">
+        <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        <span>Xóa đã chọn</span>
+      </button>
+
+      <button id="btn-batch-cancel" class="btn" title="Bỏ chọn tất cả (Esc)">
+        <span>Bỏ chọn</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Lightbox: Full 100vw x 100vh, zero margins -->
+  <div id="lightbox">
+    <div class="lightbox-header" id="lb-header">
+      <div class="lightbox-info">
+        <span id="lb-index" style="color:#fff;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,0.8);">0 / 0</span>
+        <span id="lb-title" class="lightbox-title">Filename</span>
+      </div>
+      
+      <div class="lightbox-actions">
+        <!-- Zoom Slider (ảnh) -->
+        <div class="zoom-slider-box" id="lb-zoom-box">
+          <button id="lb-zoom-out" style="background:none;border:none;color:#fff;cursor:pointer;display:flex;" title="Thu nhỏ (-)">
+            <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+          </button>
+          <input type="range" id="lb-zoom-slider" min="50" max="500" value="100" title="Thanh trượt phóng to / thu nhỏ" />
+          <button id="lb-zoom-in" style="background:none;border:none;color:#fff;cursor:pointer;display:flex;" title="Phóng to (+)">
+            <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </button>
+          <span id="lb-zoom-val" class="zoom-badge" title="Bấm để về 100%">100%</span>
+        </div>
+        
+        <!-- Video Playback Mode Dropdown (chỉ hiện khi xem video) -->
+        <div class="dropdown" id="lb-video-mode-dropdown" style="display:none;">
+          <button id="lb-video-mode-btn" class="icon-btn" style="width:auto;padding:0 8px;gap:4px;" title="Chế độ phát video">
+            <span id="lb-video-mode-icon" style="display:flex;align-items:center;">
+              <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>
+            </span>
+            <svg style="width:10px;height:10px;fill:currentColor;opacity:0.75;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div id="lb-video-mode-menu" class="dropdown-menu" style="min-width:250px;">
+            <div class="dropdown-item" data-mode="repeat-one">
+              <span class="mode-icon-wrap" style="display:flex;align-items:center;">
+                <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>
+              </span>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:13px;">Lặp lại một mục</div>
+                <div style="font-size:11px;color:var(--text-sub);">Hết video tự phát lại chính nó</div>
+              </div>
+              <span class="check-mark" style="font-size:14px;color:var(--accent);font-weight:bold;">✓</span>
+            </div>
+            <div class="dropdown-item" data-mode="repeat-all">
+              <span class="mode-icon-wrap" style="display:flex;align-items:center;">
+                <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+              </span>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:13px;">Lặp lại tất cả</div>
+                <div style="font-size:11px;color:var(--text-sub);">Tự chuyển video tiếp, lặp vô tận</div>
+              </div>
+              <span class="check-mark" style="font-size:14px;color:var(--accent);font-weight:bold;">✓</span>
+            </div>
+            <div class="dropdown-item" data-mode="play-next">
+              <span class="mode-icon-wrap" style="display:flex;align-items:center;">
+                <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+              </span>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:13px;">Tự chuyển khi hết video</div>
+                <div style="font-size:11px;color:var(--text-sub);">Tự sang video kế, dừng ở cuối</div>
+              </div>
+              <span class="check-mark" style="font-size:14px;color:var(--accent);font-weight:bold;">✓</span>
+            </div>
+            <div class="dropdown-item" data-mode="shuffle-repeat">
+              <span class="mode-icon-wrap" style="display:flex;align-items:center;">
+                <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+              </span>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:13px;">Chuyển ngẫu nhiên & lặp lại</div>
+                <div style="font-size:11px;color:var(--text-sub);">Phát ngẫu nhiên, lặp vô tận</div>
+              </div>
+              <span class="check-mark" style="font-size:14px;color:var(--accent);font-weight:bold;">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fullscreen Button -->
+        <button id="lb-fullscreen" class="icon-btn" title="Toàn màn hình (F)">
+          <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        </button>
+
+        <!-- Rotate (ảnh) -->
+        <button id="lb-rotate" class="icon-btn" title="Xoay 90 độ (R)">
+          <svg viewBox="0 0 24 24"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zm1.01 5.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c3.37 0 6.09 2.72 6.09 6.09s-2.72 6.09-6.09 6.09v2.02c4.49 0 8.11-3.62 8.11-8.11 0-4.47-3.6-8.11-8.11-8.11z"/></svg>
+        </button>
+
+        <!-- Slideshow Group (ảnh) có tuỳ chọn tốc độ -->
+        <div class="slideshow-group" id="lb-slideshow-group" style="display:inline-flex;align-items:center;gap:3px;">
+          <button id="lb-slideshow" class="icon-btn" title="Tự động trình chiếu (Space)">
+            <svg id="slideshow-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <div class="dropdown" id="lb-speed-dropdown">
+            <button id="lb-speed-btn" class="icon-btn" style="width:auto;padding:0 7px;font-size:12px;font-weight:600;gap:2px;" title="Tốc độ chuyển ảnh slideshow">
+              <span id="lb-speed-val">3s</span>
+              <svg style="width:10px;height:10px;fill:currentColor;opacity:0.75;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+            <div id="lb-speed-menu" class="dropdown-menu" style="min-width:145px;">
+              <div class="dropdown-item" data-speed="1000"><span>⚡ Nhanh (1s)</span></div>
+              <div class="dropdown-item" data-speed="2000"><span>🚀 Vừa (2s)</span></div>
+              <div class="dropdown-item active" data-speed="3000"><span>⏱️ Chuẩn (3s)</span></div>
+              <div class="dropdown-item" data-speed="5000"><span>🌿 Chậm (5s)</span></div>
+              <div class="dropdown-item" data-speed="10000"><span>🖼️ Rất chậm (10s)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Current Item -->
+        <button id="lb-delete-current" class="icon-btn btn-delete-item" title="Xóa file này (Delete)">
+          <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+
+        <!-- Help Button ? -->
+        <button id="lb-help-btn" class="icon-btn" title="Xem hướng dẫn phím tắt (?)">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+        </button>
+
+        <!-- Close -->
+        <button id="lb-close" class="icon-btn" title="Đóng (Esc)">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Help Modal Box -->
+    <div id="help-modal" class="help-modal">
+      <div class="help-header">
+        <h3>
+          <svg style="width:16px;height:16px;fill:var(--accent);" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+          Hướng Dẫn Phím Tắt
+        </h3>
+        <button id="help-close-btn" class="help-close-btn" title="Đóng">&times;</button>
+      </div>
+      <div class="help-grid">
+        <div class="help-row"><kbd>←</kbd> <kbd>→</kbd> <span>Chuyển ảnh / video trước & sau</span></div>
+        <div class="help-row"><kbd>Space</kbd> <span>Phát/Dừng video hoặc Slideshow ảnh</span></div>
+        <div class="help-row"><kbd>+</kbd> <kbd>-</kbd> / Cuộn chuột <span>Thu phóng ảnh (50% - 500%)</span></div>
+        <div class="help-row"><kbd>Kéo chuột</kbd> <span>Di chuyển ảnh khi phóng to</span></div>
+        <div class="help-row"><kbd>Delete</kbd> <span>Xóa file hiện tại khỏi danh sách</span></div>
+        <div class="help-row"><kbd>B</kbd> <span>Ẩn / Hiện thanh Album bên trái</span></div>
+        <div class="help-row"><kbd>S</kbd> <span>Đổi tốc độ slideshow ảnh</span></div>
+        <div class="help-row"><kbd>R</kbd> <span>Xoay ảnh 90 độ</span></div>
+        <div class="help-row"><kbd>F</kbd> <span>Bật / Tắt toàn màn hình</span></div>
+        <div class="help-row"><kbd>H</kbd> <span>Ẩn / Hiện thanh công cụ</span></div>
+        <div class="help-row"><kbd>M</kbd> <span>Đổi chế độ lặp / phát video (4 chế độ)</span></div>
+        <div class="help-row"><kbd>?</kbd> <span>Bật / Tắt bảng hướng dẫn này</span></div>
+        <div class="help-row"><kbd>Esc</kbd> <span>Thoát xem ảnh / video</span></div>
+      </div>
+    </div>
+
+    <!-- Media Body -->
+    <div class="lightbox-body" id="lb-body">
+      <button id="lb-prev" class="nav-btn prev" title="Trước (←)">
+        <svg style="width:26px;height:26px;fill:currentColor" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
+
+      <div class="lightbox-media-container" id="lb-container">
+        <img id="lb-img" src="" alt="Full view" draggable="false" style="display:none;" />
+        <video id="lb-video" controls playsinline style="display:none;"></video>
+      </div>
+
+      <button id="lb-next" class="nav-btn next" title="Sau (→)">
+        <svg style="width:26px;height:26px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    const VIDEO_EXTS = ['.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi', '.ts'];
+
+    // State
+    let rawFiles = [];
+    let displayedFiles = [];
+    let albums = [];
+    let currentAlbumId = 'all'; // 'all', 'unassigned', or custom album id
+    let selectedKeys = new Set();
+    let isSelectionMode = false;
+    let activePlaybackFiles = null;
+
+    let currentIndex = 0;
+    let rotation = 0;
+    let zoomLevel = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let slideshowTimer = null;
+    let slideshowSpeed = parseInt(localStorage.getItem('slideshowSpeed') || '3000', 10);
+    let uiTimer = null;
+    let isUiHidden = false;
+
+    // Elements - Header & Main
+    const mainHeader = document.getElementById('main-header');
+    const hideHeaderBtn = document.getElementById('hide-header-btn');
+    const toggleHeaderBtn = document.getElementById('toggle-header-btn');
+    const btnFullscreenMain = document.getElementById('btn-fullscreen-main');
+    const btnClearAll = document.getElementById('btn-clear-all');
+    const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+    
+    // Dropdown Elements
+    const openDropdownBtn = document.getElementById('open-dropdown-btn');
+    const openDropdownMenu = document.getElementById('open-dropdown-menu');
+    const menuSelectFolder = document.getElementById('menu-select-folder');
+    const menuSelectFiles = document.getElementById('menu-select-files');
+    const btnEmptyFolder = document.getElementById('btn-empty-folder');
+    const btnEmptyFiles = document.getElementById('btn-empty-files');
+    const toast = document.getElementById('toast');
+
+    const dirInput = document.getElementById('dir-input');
+    const fileInput = document.getElementById('file-input');
+    const emptyState = document.getElementById('empty-state');
+    const gallery = document.getElementById('gallery');
+    const searchInput = document.getElementById('search-input');
+    const typeFilter = document.getElementById('type-filter');
+    const sortSelect = document.getElementById('sort-select');
+    const sizeSlider = document.getElementById('size-slider');
+
+    // Album Sidebar & Header Elements
+    const albumSidebar = document.getElementById('album-sidebar');
+    const btnCreateAlbum = document.getElementById('btn-create-album');
+    const customAlbumsList = document.getElementById('custom-albums-list');
+    const albumNavAll = document.getElementById('album-nav-all');
+    const badgeCountAll = document.getElementById('badge-count-all');
+
+    const albumHeaderBar = document.getElementById('album-header-bar');
+    const currentAlbumNameText = document.getElementById('current-album-name-text');
+    const currentAlbumMeta = document.getElementById('current-album-meta');
+    const btnPlayAll = document.getElementById('btn-play-all');
+    const btnToggleSelect = document.getElementById('btn-toggle-select');
+    const btnRenameAlbum = document.getElementById('btn-rename-album');
+    const btnDeleteAlbum = document.getElementById('btn-delete-album');
+
+    // Batch Action Bar Elements
+    const batchActionBar = document.getElementById('batch-action-bar');
+    const batchCountBadge = document.getElementById('batch-count-badge');
+    const batchText = document.getElementById('batch-text');
+    const btnBatchPlay = document.getElementById('btn-batch-play');
+    const btnBatchAlbum = document.getElementById('btn-batch-album');
+    const batchAlbumMenu = document.getElementById('batch-album-menu');
+    const btnBatchDelete = document.getElementById('btn-batch-delete');
+    const btnBatchCancel = document.getElementById('btn-batch-cancel');
+
+    // Lightbox Elements
+    const lightbox = document.getElementById('lightbox');
+    const lbHeader = document.getElementById('lb-header');
+    const lbBody = document.getElementById('lb-body');
+    const lbContainer = document.getElementById('lb-container');
+    const lbImg = document.getElementById('lb-img');
+    const lbVideo = document.getElementById('lb-video');
+    const lbIndex = document.getElementById('lb-index');
+    const lbTitle = document.getElementById('lb-title');
+    const lbPrev = document.getElementById('lb-prev');
+    const lbNext = document.getElementById('lb-next');
+    const lbClose = document.getElementById('lb-close');
+    const lbRotate = document.getElementById('lb-rotate');
+    const lbSlideshowGroup = document.getElementById('lb-slideshow-group');
+    const lbSlideshow = document.getElementById('lb-slideshow');
+    const slideshowIcon = document.getElementById('slideshow-icon');
+    const lbSpeedBtn = document.getElementById('lb-speed-btn');
+    const lbSpeedVal = document.getElementById('lb-speed-val');
+    const lbSpeedMenu = document.getElementById('lb-speed-menu');
+    const lbZoomBox = document.getElementById('lb-zoom-box');
+    const lbZoomIn = document.getElementById('lb-zoom-in');
+    const lbZoomOut = document.getElementById('lb-zoom-out');
+    const lbZoomVal = document.getElementById('lb-zoom-val');
+    const lbZoomSlider = document.getElementById('lb-zoom-slider');
+    const lbFullscreen = document.getElementById('lb-fullscreen');
+    const lbHelpBtn = document.getElementById('lb-help-btn');
+    const lbDeleteCurrent = document.getElementById('lb-delete-current');
+    const helpModal = document.getElementById('help-modal');
+    const helpCloseBtn = document.getElementById('help-close-btn');
+
+    // Video Mode Dropdown Elements
+    const lbVideoModeDropdown = document.getElementById('lb-video-mode-dropdown');
+    const lbVideoModeBtn = document.getElementById('lb-video-mode-btn');
+    const lbVideoModeIcon = document.getElementById('lb-video-mode-icon');
+    const lbVideoModeMenu = document.getElementById('lb-video-mode-menu');
+
+    // ==========================================
+    // TOAST NOTIFICATION
+    // ==========================================
+    let toastTimer = null;
+    function showToast(msg) {
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // ==========================================
+    // CHẾ ĐỘ PHÁT VIDEO (VIDEO PLAYBACK MODES)
+    // ==========================================
+    const VIDEO_MODES = {
+      'repeat-one': {
+        name: 'Lặp lại một mục',
+        desc: 'Hết video tự phát lại chính nó',
+        icon: '<svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>'
+      },
+      'repeat-all': {
+        name: 'Lặp lại tất cả',
+        desc: 'Tự chuyển video tiếp, lặp vô tận',
+        icon: '<svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>'
+      },
+      'play-next': {
+        name: 'Tự chuyển khi hết video',
+        desc: 'Tự sang video kế, dừng ở cuối',
+        icon: '<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>'
+      },
+      'shuffle-repeat': {
+        name: 'Chuyển ngẫu nhiên & lặp lại tất cả',
+        desc: 'Phát ngẫu nhiên, lặp vô tận',
+        icon: '<svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>'
+      }
+    };
+
+    let videoPlaybackMode = localStorage.getItem('videoPlaybackMode') || 'repeat-all';
+
+    function setVideoPlaybackMode(mode, showNotification = true) {
+      if (!VIDEO_MODES[mode]) mode = 'repeat-all';
+      videoPlaybackMode = mode;
+      localStorage.setItem('videoPlaybackMode', mode);
+
+      if (lbVideoModeIcon) lbVideoModeIcon.innerHTML = VIDEO_MODES[mode].icon;
+      if (lbVideoModeBtn) lbVideoModeBtn.title = `Chế độ phát video: ${VIDEO_MODES[mode].name}`;
+      if (lbVideo) lbVideo.loop = (mode === 'repeat-one');
+
+      if (lbVideoModeMenu) {
+        lbVideoModeMenu.querySelectorAll('.dropdown-item').forEach(el => {
+          const itemMode = el.getAttribute('data-mode');
+          const checkEl = el.querySelector('.check-mark');
+          if (itemMode === mode) {
+            el.classList.add('active');
+            if (checkEl) checkEl.style.display = 'inline';
+          } else {
+            el.classList.remove('active');
+            if (checkEl) checkEl.style.display = 'none';
+          }
+        });
+      }
+
+      if (showNotification) {
+        showToast(`Chế độ phát: ${VIDEO_MODES[mode].name}`);
+      }
+    }
+
+    function cycleVideoPlaybackMode() {
+      const keys = ['repeat-one', 'repeat-all', 'play-next', 'shuffle-repeat'];
+      const nextMode = keys[(keys.indexOf(videoPlaybackMode) + 1) % keys.length];
+      setVideoPlaybackMode(nextMode, true);
+    }
+
+    // ==========================================
+    // TỐC ĐỘ SLIDESHOW ẢNH (SLIDESHOW SPEED)
+    // ==========================================
+    function setSlideshowSpeed(ms, showNotification = true) {
+      slideshowSpeed = parseInt(ms, 10) || 3000;
+      localStorage.setItem('slideshowSpeed', slideshowSpeed);
+
+      if (lbSpeedVal) {
+        lbSpeedVal.textContent = (slideshowSpeed / 1000) + 's';
+      }
+
+      if (lbSpeedMenu) {
+        lbSpeedMenu.querySelectorAll('.dropdown-item').forEach(el => {
+          const spd = parseInt(el.getAttribute('data-speed'), 10);
+          if (spd === slideshowSpeed) {
+            el.classList.add('active');
+          } else {
+            el.classList.remove('active');
+          }
+        });
+      }
+
+      if (slideshowTimer) {
+        clearInterval(slideshowTimer);
+        slideshowTimer = setInterval(() => nextItem(false), slideshowSpeed);
+      }
+
+      if (showNotification) {
+        showToast(`Tốc độ slideshow: ${slideshowSpeed / 1000} giây`);
+      }
+    }
+
+    function cycleSlideshowSpeed() {
+      const speeds = [1000, 2000, 3000, 5000, 10000];
+      const curIdx = speeds.indexOf(slideshowSpeed);
+      const nextSpd = speeds[(curIdx + 1) % speeds.length];
+      setSlideshowSpeed(nextSpd, true);
+    }
+
+    // ==========================================
+    // INDEXEDDB PERSISTENCE (MEDIA & ALBUMS)
+    // ==========================================
+    let db = null;
+    function initDB() {
+      return new Promise((resolve) => {
+        try {
+          const req = indexedDB.open('MediaViewerDB', 2);
+          req.onupgradeneeded = (e) => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains('media')) {
+              d.createObjectStore('media', { keyPath: 'key' });
+            }
+            if (!d.objectStoreNames.contains('albums')) {
+              d.createObjectStore('albums', { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = (e) => {
+            db = e.target.result;
+            resolve(db);
+          };
+          req.onerror = () => resolve(null);
+        } catch {
+          resolve(null);
+        }
+      });
+    }
+
+        function saveMediaRecordsBatch(records) {
+      if (!db || records.length === 0) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('media', 'readwrite');
+          const store = tx.objectStore('media');
+          for (const r of records) {
+            store.put(r);
+          }
+          tx.oncomplete = () => resolve();
+          tx.onerror = (err) => {
+            console.warn('Batch save error:', err);
+            resolve();
+          };
+        } catch (err) {
+          console.warn('Transaction error:', err);
+          resolve();
+        }
+      });
+    }
+
+    function saveMediaRecord(record) {
+      if (!db) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('media', 'readwrite');
+          tx.objectStore('media').put(record);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
+    function deleteMediaRecord(key) {
+      if (!db) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('media', 'readwrite');
+          tx.objectStore('media').delete(key);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
+    function clearAllFromDB() {
+      if (!db) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(['media', 'albums'], 'readwrite');
+          tx.objectStore('media').clear();
+          tx.objectStore('albums').clear();
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
+    function loadAllFromDB() {
+      if (!db) return Promise.resolve([]);
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('media', 'readonly');
+          const req = tx.objectStore('media').getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } catch { resolve([]); }
+      });
+    }
+
+    function saveAlbumRecord(album) {
+      if (!db) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('albums', 'readwrite');
+          tx.objectStore('albums').put(album);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
+    function deleteAlbumRecord(id) {
+      if (!db) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('albums', 'readwrite');
+          tx.objectStore('albums').delete(id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
+    function loadAllAlbumsFromDB() {
+      if (!db) return Promise.resolve([]);
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('albums', 'readonly');
+          const req = tx.objectStore('albums').getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } catch { resolve([]); }
+      });
+    }
+
+    // Auto-load saved media and albums on startup
+    window.addEventListener('DOMContentLoaded', async () => {
+      await initDB();
+      const [savedMedia, savedAlbums] = await Promise.all([
+        loadAllFromDB(),
+        loadAllAlbumsFromDB()
+      ]);
+
+      albums = savedAlbums || [];
+
+      if (savedMedia && savedMedia.length > 0) {
+        rawFiles = savedMedia.map(item => ({
+          key: item.key,
+          name: item.name,
+          size: item.size,
+          lastModified: item.lastModified,
+          type: item.type,
+          albumId: item.albumId || 'unassigned',
+          blob: item.blob,
+          url: URL.createObjectURL(item.blob)
+        }));
+      }
+
+      setVideoPlaybackMode(videoPlaybackMode, false);
+      setSlideshowSpeed(slideshowSpeed, false);
+      renderAlbumSidebar();
+      applyFilterAndRender();
+
+      if (rawFiles.length > 0) {
+        showToast(`Đã khôi phục ${rawFiles.length} file và ${albums.length} album`);
+      }
+    });
+
+    // ==========================================
+    // SIDEBAR & ALBUM MANAGEMENT
+    // ==========================================
+    btnToggleSidebar.addEventListener('click', () => {
+      albumSidebar.classList.toggle('collapsed');
+    });
+
+    albumNavAll.addEventListener('click', () => {
+      currentAlbumId = 'all';
+      renderAlbumSidebar();
+      applyFilterAndRender();
+    });
+
+
+
+    btnCreateAlbum.addEventListener('click', async () => {
+      const name = prompt('Nhập tên Album mới:');
+      if (name && name.trim()) {
+        const newAlbum = {
+          id: 'alb_' + Date.now(),
+          name: name.trim(),
+          createdAt: Date.now()
+        };
+        await saveAlbumRecord(newAlbum);
+        albums.push(newAlbum);
+        currentAlbumId = newAlbum.id;
+        renderAlbumSidebar();
+        applyFilterAndRender();
+        showToast(`Đã tạo album "${newAlbum.name}"`);
+      }
+    });
+
+    btnRenameAlbum.addEventListener('click', async () => {
+      const currentAlbum = albums.find(a => a.id === currentAlbumId);
+      if (!currentAlbum) return;
+      const newName = prompt('Nhập tên mới cho album:', currentAlbum.name);
+      if (newName && newName.trim() && newName.trim() !== currentAlbum.name) {
+        currentAlbum.name = newName.trim();
+        await saveAlbumRecord(currentAlbum);
+        renderAlbumSidebar();
+        applyFilterAndRender();
+        showToast(`Đã đổi tên thành "${currentAlbum.name}"`);
+      }
+    });
+
+    btnDeleteAlbum.addEventListener('click', async () => {
+      const currentAlbum = albums.find(a => a.id === currentAlbumId);
+      if (!currentAlbum) return;
+      if (confirm(`Bạn có chắc muốn xóa album "${currentAlbum.name}"? Các file trong album vẫn sẽ được giữ lại trong "Tất cả file".`)) {
+        for (const item of rawFiles) {
+          if (item.albumId === currentAlbum.id) {
+            item.albumId = null;
+            await saveMediaRecord({
+              key: item.key,
+              name: item.name,
+              size: item.size,
+              lastModified: item.lastModified,
+              type: item.type,
+              albumId: null,
+              blob: item.blob
+            });
+          }
+        }
+        await deleteAlbumRecord(currentAlbum.id);
+        albums = albums.filter(a => a.id !== currentAlbum.id);
+        currentAlbumId = 'all';
+        renderAlbumSidebar();
+        applyFilterAndRender();
+        showToast(`Đã xóa album "${currentAlbum.name}"`);
+      }
+    });
+
+    function setupAlbumDropTarget(el, targetAlbumId) {
+      el.addEventListener('dragover', (e) => {
+        if (e.dataTransfer.types.includes('application/json')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          el.classList.add('drag-target-hover');
+        }
+      });
+      el.addEventListener('dragleave', () => {
+        el.classList.remove('drag-target-hover');
+      });
+      el.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        el.classList.remove('drag-target-hover');
+        try {
+          const raw = e.dataTransfer.getData('application/json');
+          const data = JSON.parse(raw);
+          if (data && data.keys && data.keys.length > 0) {
+            await moveMediaToAlbum(data.keys, targetAlbumId);
+          }
+        } catch (err) {
+          console.warn('Drop error:', err);
+        }
+      });
+    }
+
+    function renderAlbumSidebar() {
+      // Calculate counts
+      const countAll = rawFiles.length;
+      badgeCountAll.textContent = countAll;
+      albumNavAll.classList.toggle('active', currentAlbumId === 'all');
+
+      // Render custom albums
+      customAlbumsList.innerHTML = '';
+      albums.forEach(alb => {
+        const albCount = rawFiles.filter(f => f.albumId === alb.id).length;
+        const div = document.createElement('div');
+        div.className = 'album-nav-item' + (currentAlbumId === alb.id ? ' active' : '');
+        div.dataset.albumId = alb.id;
+
+        div.innerHTML = `
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            <span class="album-name" title="${alb.name}">${alb.name}</span>
+          </div>
+          <span class="album-badge">${albCount}</span>
+        `;
+
+        div.addEventListener('click', () => {
+          currentAlbumId = alb.id;
+          renderAlbumSidebar();
+          applyFilterAndRender();
+        });
+
+        setupAlbumDropTarget(div, alb.id);
+        customAlbumsList.appendChild(div);
+      });
+
+      // Update Album Header Bar
+      let title = 'Tất cả file';
+      const isCustom = albums.some(a => a.id === currentAlbumId);
+      if (currentAlbumId === 'unassigned') {
+        title = 'Chưa phân loại';
+      } else if (isCustom) {
+        const found = albums.find(a => a.id === currentAlbumId);
+        if (found) title = found.name;
+      }
+      currentAlbumNameText.textContent = title;
+
+      btnRenameAlbum.style.display = isCustom ? 'inline-flex' : 'none';
+      btnDeleteAlbum.style.display = isCustom ? 'inline-flex' : 'none';
+
+      // Update Batch Album Dropdown menu
+      updateBatchAlbumMenu();
+    }
+
+    function updateBatchAlbumMenu() {
+      if (!batchAlbumMenu) return;
+      batchAlbumMenu.innerHTML = '';
+
+
+
+      albums.forEach(alb => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.innerHTML = `<span>📁 ${alb.name}</span>`;
+        item.addEventListener('click', () => {
+          moveMediaToAlbum(Array.from(selectedKeys), alb.id);
+          batchAlbumMenu.classList.remove('show');
+        });
+        batchAlbumMenu.appendChild(item);
+      });
+    }
+
+    async function moveMediaToAlbum(keys, targetAlbumId) {
+      if (!keys || keys.length === 0) return;
+      let count = 0;
+      for (const item of rawFiles) {
+        if (keys.includes(item.key)) {
+          item.albumId = targetAlbumId;
+          await saveMediaRecord({
+            key: item.key,
+            name: item.name,
+            size: item.size,
+            lastModified: item.lastModified,
+            type: item.type,
+            albumId: targetAlbumId,
+            blob: item.blob
+          });
+          count++;
+        }
+      }
+      clearSelection();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+
+      let albName = 'Chưa phân loại';
+      const targetAlb = albums.find(a => a.id === targetAlbumId);
+      if (targetAlb) albName = targetAlb.name;
+      showToast(`Đã chuyển ${count} file vào album "${albName}"`);
+    }
+
+    // ==========================================
+    // MULTI-SELECTION & BATCH ACTIONS
+    // ==========================================
+    function toggleSelect(key) {
+      if (selectedKeys.has(key)) {
+        selectedKeys.delete(key);
+      } else {
+        selectedKeys.add(key);
+      }
+      updateSelectionUI();
+    }
+
+    function clearSelection() {
+      selectedKeys.clear();
+      isSelectionMode = false;
+      document.body.classList.remove('selecting-mode');
+      btnToggleSelect.classList.remove('btn-primary');
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      document.querySelectorAll('.image-card').forEach(card => {
+        const key = card.dataset.key;
+        if (selectedKeys.has(key)) {
+          card.classList.add('selected');
+        } else {
+          card.classList.remove('selected');
+        }
+      });
+
+      const count = selectedKeys.size;
+      batchCountBadge.textContent = count;
+      batchText.textContent = `Đã chọn ${count} file`;
+
+      if (count > 0) {
+        batchActionBar.classList.add('show');
+      } else {
+        batchActionBar.classList.remove('show');
+      }
+    }
+
+    btnToggleSelect.addEventListener('click', () => {
+      isSelectionMode = !isSelectionMode;
+      document.body.classList.toggle('selecting-mode', isSelectionMode);
+      btnToggleSelect.classList.toggle('btn-primary', isSelectionMode);
+      if (!isSelectionMode && selectedKeys.size > 0) {
+        clearSelection();
+      }
+    });
+
+    btnBatchCancel.addEventListener('click', clearSelection);
+
+    // Phát các file đã chọn
+    btnBatchPlay.addEventListener('click', () => {
+      if (selectedKeys.size === 0) return;
+      const selectedList = rawFiles.filter(item => selectedKeys.has(item.key));
+      openLightbox(0, selectedList);
+    });
+
+    btnBatchAlbum.addEventListener('click', (e) => {
+      e.stopPropagation();
+      batchAlbumMenu.classList.toggle('show');
+    });
+
+    btnBatchDelete.addEventListener('click', async () => {
+      if (selectedKeys.size === 0) return;
+      if (confirm(`Bạn có chắc chắn muốn xóa ${selectedKeys.size} file đã chọn khỏi bộ nhớ web không?`)) {
+        const keysToDelete = Array.from(selectedKeys);
+        for (const k of keysToDelete) {
+          await deleteMediaRecord(k);
+          const f = rawFiles.find(item => item.key === k);
+          if (f) URL.revokeObjectURL(f.url);
+        }
+
+        rawFiles = rawFiles.filter(item => !selectedKeys.has(item.key));
+        clearSelection();
+        renderAlbumSidebar();
+        applyFilterAndRender();
+        showToast(`Đã xóa ${keysToDelete.length} file`);
+      }
+    });
+
+    // Phát tất cả trong album hiện tại
+    btnPlayAll.addEventListener('click', () => {
+      if (displayedFiles.length === 0) {
+        showToast('Album này hiện chưa có file nào!');
+        return;
+      }
+      openLightbox(0);
+    });
+
+    // ==========================================
+    // TOPBAR DROPDOWN & SPEED DROPDOWN LOGIC
+    // ==========================================
+    openDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDropdownMenu.classList.toggle('show');
+    });
+
+    lbVideoModeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      lbVideoModeMenu.classList.toggle('show');
+      if (lbVideoModeMenu.classList.contains('show')) {
+        clearTimeout(uiTimer);
+      }
+    });
+
+    lbSpeedBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      lbSpeedMenu.classList.toggle('show');
+      if (lbSpeedMenu.classList.contains('show')) {
+        clearTimeout(uiTimer);
+      }
+    });
+
+    window.addEventListener('click', (e) => {
+      openDropdownMenu.classList.remove('show');
+      if (lbVideoModeMenu && !e.target.closest('#lb-video-mode-dropdown')) {
+        lbVideoModeMenu.classList.remove('show');
+      }
+      if (lbSpeedMenu && !e.target.closest('#lb-speed-dropdown')) {
+        lbSpeedMenu.classList.remove('show');
+      }
+      if (batchAlbumMenu && !e.target.closest('#batch-album-dropdown')) {
+        batchAlbumMenu.classList.remove('show');
+      }
+    });
+
+    lbVideoModeMenu.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const mode = item.getAttribute('data-mode');
+        setVideoPlaybackMode(mode, true);
+        lbVideoModeMenu.classList.remove('show');
+        showLightboxUI();
+      });
+    });
+
+    lbSpeedMenu.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const spd = item.getAttribute('data-speed');
+        setSlideshowSpeed(spd, true);
+        lbSpeedMenu.classList.remove('show');
+        showLightboxUI();
+      });
+    });
+
+    lbVideoModeMenu.addEventListener('mouseenter', () => clearTimeout(uiTimer));
+    lbSpeedMenu.addEventListener('mouseenter', () => clearTimeout(uiTimer));
+
+    async function scanDirectoryHandle(dirHandle, pathSegments = [], gatheredFiles = []) {
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === 'file') {
+          const f = await entry.getFile();
+          f._folderSegments = [...pathSegments];
+          gatheredFiles.push(f);
+        } else if (entry.kind === 'directory') {
+          await scanDirectoryHandle(entry, [...pathSegments, entry.name], gatheredFiles);
+        }
+      }
+    }
+
+    async function triggerFolderPicker() {
+      openDropdownMenu.classList.remove('show');
+      if (window.showDirectoryPicker) {
+        try {
+          const dirHandle = await window.showDirectoryPicker();
+          const files = [];
+          await scanDirectoryHandle(dirHandle, [], files);
+          if (files.length > 0) {
+            await loadFiles(files);
+            return;
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+          console.warn('showDirectoryPicker fallback:', err);
+        }
+      }
+      dirInput.click();
+    }
+
+    function triggerFilePicker() {
+      openDropdownMenu.classList.remove('show');
+      fileInput.click();
+    }
+
+    menuSelectFolder.addEventListener('click', triggerFolderPicker);
+    menuSelectFiles.addEventListener('click', triggerFilePicker);
+    btnEmptyFolder.addEventListener('click', triggerFolderPicker);
+    btnEmptyFiles.addEventListener('click', triggerFilePicker);
+
+    // Xóa tất cả (Clear All)
+    async function clearAllMedia() {
+      if (rawFiles.length === 0) return;
+      if (confirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh, video và album đã lưu không?')) {
+        await clearAllFromDB();
+        rawFiles.forEach(item => URL.revokeObjectURL(item.url));
+        rawFiles = [];
+        albums = [];
+        displayedFiles = [];
+        currentAlbumId = 'all';
+        clearSelection();
+        renderAlbumSidebar();
+        applyFilterAndRender();
+        showToast('Đã xóa sạch toàn bộ dữ liệu');
+      }
+    }
+    btnClearAll.addEventListener('click', clearAllMedia);
+
+    // Xóa file hiện tại đang xem (Delete Single Item in Lightbox)
+    async function deleteCurrentItem() {
+      const activeList = getActiveMediaList();
+      if (activeList.length === 0) return;
+      const target = activeList[currentIndex];
+      if (!target) return;
+
+      const confirmMsg = target.type === 'video' ? `Xóa video "${target.name}"?` : `Xóa ảnh "${target.name}"?`;
+      if (confirm(confirmMsg)) {
+        await deleteMediaRecord(target.key);
+        URL.revokeObjectURL(target.url);
+
+        rawFiles = rawFiles.filter(item => item.key !== target.key);
+        if (activePlaybackFiles) {
+          activePlaybackFiles = activePlaybackFiles.filter(item => item.key !== target.key);
+        }
+        selectedKeys.delete(target.key);
+
+        renderAlbumSidebar();
+        applyFilterAndRender();
+
+        const updatedList = getActiveMediaList();
+        if (updatedList.length === 0) {
+          closeLightbox();
+        } else {
+          currentIndex = currentIndex % updatedList.length;
+          updateLightboxMedia();
+        }
+        showToast(`Đã xóa: ${target.name}`);
+      }
+    }
+    lbDeleteCurrent.addEventListener('click', deleteCurrentItem);
+
+    dirInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        loadFiles(Array.from(e.target.files));
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        loadFiles(Array.from(e.target.files));
+      }
+    });
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else if (document.documentElement.webkitRequestFullscreen) {
+          document.documentElement.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+
+    btnFullscreenMain.addEventListener('click', toggleFullScreen);
+    lbFullscreen.addEventListener('click', toggleFullScreen);
+
+    hideHeaderBtn.addEventListener('click', () => {
+      mainHeader.classList.add('hidden-bar');
+    });
+
+    toggleHeaderBtn.addEventListener('click', () => {
+      mainHeader.classList.remove('hidden-bar');
+    });
+
+    sizeSlider.addEventListener('input', (e) => {
+      document.documentElement.style.setProperty('--thumb-size', `${e.target.value}px`);
+    });
+
+    // Native Drag and Drop outside folder/files
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      emptyState.classList.add('dragover');
+    });
+
+    window.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      emptyState.classList.remove('dragover');
+    });
+
+    window.addEventListener('drop', async (e) => {
+      // If dropping internal media cards to sidebar, don't handle as import
+      if (e.dataTransfer.types.includes('application/json')) return;
+
+      e.preventDefault();
+      emptyState.classList.remove('dragover');
+      
+      const items = e.dataTransfer.items;
+      if (items && items.length > 0) {
+        const gatheredFiles = [];
+        const queue = [];
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.webkitGetAsEntry) {
+            const entry = item.webkitGetAsEntry();
+            if (entry) queue.push(traverseFileTree(entry, gatheredFiles));
+          } else if (item.kind === 'file') {
+            gatheredFiles.push(item.getAsFile());
+          }
+        }
+
+        await Promise.all(queue);
+        if (gatheredFiles.length > 0) {
+          loadFiles(gatheredFiles);
+          return;
+        }
+      }
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        loadFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    async function traverseFileTree(item, list, pathSegments = []) {
+      if (item.isFile) {
+        return new Promise(resolve => {
+          item.file(f => {
+            f._folderSegments = [...pathSegments];
+            list.push(f);
+            resolve();
+          }, () => resolve());
+        });
+      } else if (item.isDirectory) {
+        const dirReader = item.createReader();
+        return new Promise(resolve => {
+          const readAllEntries = () => {
+            dirReader.readEntries(async entries => {
+              if (entries.length === 0) {
+                resolve();
+                return;
+              }
+              const promises = entries.map(child => traverseFileTree(child, list, [...pathSegments, item.name]));
+              await Promise.all(promises);
+              readAllEntries();
+            }, () => resolve());
+          };
+          readAllEntries();
+        });
+      }
+    }
+
+    function extractSubfolderName(f) {
+      if (f._folderSegments && f._folderSegments.length > 0) {
+        return f._folderSegments[f._folderSegments.length - 1];
+      }
+      if (f.webkitRelativePath) {
+        const parts = f.webkitRelativePath.split('/').filter(Boolean);
+        if (parts.length >= 3) {
+          return parts[parts.length - 2];
+        }
+      }
+      return '';
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function detectMediaType(filename) {
+      const lower = filename.toLowerCase();
+      if (IMAGE_EXTS.some(ext => lower.endsWith(ext))) return 'photo';
+      if (VIDEO_EXTS.some(ext => lower.endsWith(ext))) return 'video';
+      return null;
+    }
+
+    async function loadFiles(files) {
+      const existingKeys = new Set(rawFiles.map(item => item.key));
+      const newItems = [];
+      let addedCount = 0;
+      let newAlbumsCreatedCount = 0;
+
+      // Chuẩn bị danh mục album hiện có (không phân biệt hoa thường)
+      const albumByName = new Map();
+      albums.forEach(a => albumByName.set(a.name.toLowerCase().trim(), a.id));
+      const newAlbumsToSave = [];
+
+      for (const f of files) {
+        if (!f || !f.name || f.name.startsWith('._')) continue;
+        const type = detectMediaType(f.name);
+        if (!type) continue;
+
+        // Tự động nhận diện thư mục con
+        const subfolder = extractSubfolderName(f);
+        let fileAlbumId = (currentAlbumId !== 'all') ? currentAlbumId : 'unassigned';
+
+        if (subfolder && subfolder.trim()) {
+          const cleanName = subfolder.trim();
+          const lowerName = cleanName.toLowerCase();
+
+          if (albumByName.has(lowerName)) {
+            fileAlbumId = albumByName.get(lowerName);
+          } else {
+            // TỰ ĐỘNG TẠO ALBUM MỚI THEO TÊN THƯ MỤC CON
+            const newAlb = {
+              id: 'alb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+              name: cleanName,
+              createdAt: Date.now()
+            };
+            albumByName.set(lowerName, newAlb.id);
+            albums.push(newAlb);
+            newAlbumsToSave.push(newAlb);
+            fileAlbumId = newAlb.id;
+            newAlbumsCreatedCount++;
+          }
+        }
+
+        const key = `${f.name}_${f.size}_${f.lastModified}`;
+        if (!existingKeys.has(key)) {
+          existingKeys.add(key);
+          newItems.push({
+            key: key,
+            name: f.name,
+            size: f.size,
+            lastModified: f.lastModified,
+            type: type,
+            albumId: fileAlbumId,
+            blob: f,
+            url: URL.createObjectURL(f)
+          });
+          addedCount++;
+        }
+      }
+
+      if (rawFiles.length === 0 && addedCount === 0) {
+        alert('Không tìm thấy file ảnh (JPG, PNG, GIF, WebP) hoặc video (MP4, MOV, WebM) nào!');
+        return;
+      }
+
+      if (addedCount === 0 && files.length > 0) {
+        showToast('Các file vừa chọn đã có sẵn trong danh sách!');
+        return;
+      }
+
+      // Lưu tất cả các album tự động tạo vào IndexedDB
+      for (const alb of newAlbumsToSave) {
+        await saveAlbumRecord(alb);
+      }
+
+      // Cập nhật giao diện ngay lập tức
+      rawFiles = [...rawFiles, ...newItems];
+      renderAlbumSidebar();
+      applyFilterAndRender();
+
+      if (newAlbumsCreatedCount > 0) {
+        showToast(`Đã thêm ${addedCount} file & tự động tạo ${newAlbumsCreatedCount} Album từ các thư mục con!`);
+      } else {
+        showToast(`Đã thêm ${addedCount} file mới. Đang lưu vào bộ nhớ...`);
+      }
+
+      // Lưu ngầm toàn bộ dữ liệu vào IndexedDB
+      saveMediaRecordsBatch(newItems.map(item => ({
+        key: item.key,
+        name: item.name,
+        size: item.size,
+        lastModified: item.lastModified,
+        type: item.type,
+        albumId: item.albumId,
+        blob: item.blob
+      }))).then(() => {
+        showToast(`Đã lưu hoàn tất ${rawFiles.length} file vào bộ nhớ trình duyệt`);
+      });
+    }
+
+    function applyFilterAndRender() {
+      const keyword = searchInput.value.trim().toLowerCase();
+      const sortType = sortSelect.value;
+      const typeChoice = typeFilter.value;
+
+      displayedFiles = rawFiles.filter(item => {
+        const matchName = item.name.toLowerCase().includes(keyword);
+        const matchType = typeChoice === 'all' || item.type === typeChoice;
+        
+        let matchAlbum = true;
+        if (currentAlbumId === 'all') {
+          matchAlbum = true;
+        } else {
+          matchAlbum = (item.albumId === currentAlbumId);
+        }
+
+        return matchName && matchType && matchAlbum;
+      });
+
+      displayedFiles.sort((a, b) => {
+        if (sortType === 'name-asc') return a.name.localeCompare(b.name, undefined, { numeric: true });
+        if (sortType === 'name-desc') return b.name.localeCompare(a.name, undefined, { numeric: true });
+        if (sortType === 'date-desc') return b.lastModified - a.lastModified;
+        if (sortType === 'date-asc') return a.lastModified - b.lastModified;
+        if (sortType === 'size-desc') return b.size - a.size;
+        return 0;
+      });
+
+      // Update header meta count
+      const totalBytes = displayedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+      currentAlbumMeta.textContent = `${displayedFiles.length} file • ${formatBytes(totalBytes)}`;
+
+      renderGallery();
+    }
+
+    function renderGallery() {
+      if (displayedFiles.length === 0) {
+        emptyState.style.display = 'flex';
+        gallery.style.display = 'none';
+        albumHeaderBar.style.display = (rawFiles.length > 0) ? 'flex' : 'none';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      albumHeaderBar.style.display = 'flex';
+      gallery.style.display = 'grid';
+      gallery.innerHTML = '';
+
+      const frag = document.createDocumentFragment();
+
+      displayedFiles.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'image-card' + (selectedKeys.has(item.key) ? ' selected' : '');
+        card.dataset.key = item.key;
+        card.draggable = true;
+
+        let thumbHtml = '';
+        if (item.type === 'video') {
+          thumbHtml = `
+            <div class="thumb-wrapper">
+              <div class="video-placeholder-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+              </div>
+              <video data-src="${item.url}#t=0.1" preload="none" muted playsinline style="opacity:0;"></video>
+              <div class="video-badge">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <span>${item.name.split('.').pop().toUpperCase()}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          thumbHtml = `
+            <div class="thumb-wrapper">
+              <img src="${item.url}" alt="${item.name}" loading="lazy" />
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="card-select-btn" title="Chọn file">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          ${thumbHtml}
+          <div class="card-meta">
+            <div class="card-title" title="${item.name}">${item.name}</div>
+            <div class="card-sub">
+              <span>${item.name.split('.').pop().toUpperCase()}</span>
+              <span>${formatBytes(item.size)}</span>
+            </div>
+          </div>
+        `;
+
+        // Selection checkbox click
+        const selectBtn = card.querySelector('.card-select-btn');
+        selectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSelect(item.key);
+        });
+
+        // Card Click: if in select mode or items selected, toggle select; else open lightbox
+        card.addEventListener('click', (e) => {
+          if (isSelectionMode || selectedKeys.size > 0 || e.shiftKey || e.metaKey || e.ctrlKey) {
+            toggleSelect(item.key);
+          } else {
+            openLightbox(idx);
+          }
+        });
+
+        // Drag and Drop (Card to Album)
+        card.addEventListener('dragstart', (e) => {
+          let keysToDrag = [item.key];
+          if (selectedKeys.has(item.key) && selectedKeys.size > 1) {
+            keysToDrag = Array.from(selectedKeys);
+          }
+          e.dataTransfer.setData('application/json', JSON.stringify({ keys: keysToDrag }));
+          e.dataTransfer.effectAllowed = 'move';
+          card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+        });
+
+        frag.appendChild(card);
+      });
+
+      gallery.appendChild(frag);
+
+      // Lazy load video thumbnails with IntersectionObserver (tối đa 4 video cùng lúc, không gây cạn kiệt bộ giải mã)
+      initVideoObserver();
+      gallery.querySelectorAll('video[data-src]').forEach(v => {
+        videoObserver.observe(v);
+      });
+    }
+
+    let videoObserver = null;
+    function initVideoObserver() {
+      if (videoObserver) videoObserver.disconnect();
+      videoObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const video = entry.target;
+          if (entry.isIntersecting) {
+            if (!video.src && video.dataset.src) {
+              video.src = video.dataset.src;
+              video.preload = 'metadata';
+              video.onloadeddata = () => {
+                video.style.opacity = '1';
+                const icon = video.parentElement ? video.parentElement.querySelector('.video-placeholder-icon') : null;
+                if (icon) icon.style.opacity = '0';
+              };
+            }
+          } else {
+            // Khi cuộn ra khỏi màn hình, giải phóng bộ giải mã video phần cứng
+            if (video.src) {
+              video.pause();
+              video.removeAttribute('src');
+              video.load();
+              video.style.opacity = '0';
+              const icon = video.parentElement ? video.parentElement.querySelector('.video-placeholder-icon') : null;
+              if (icon) icon.style.opacity = '1';
+            }
+          }
+        });
+      }, {
+        rootMargin: '120px 0px',
+        threshold: 0.05
+      });
+    }
+
+    searchInput.addEventListener('input', applyFilterAndRender);
+    typeFilter.addEventListener('change', applyFilterAndRender);
+    sortSelect.addEventListener('change', applyFilterAndRender);
+
+    // ==========================================
+    // LIGHTBOX CONTROLS & AUTO-HIDE
+    // ==========================================
+    function getActiveMediaList() {
+      return activePlaybackFiles || displayedFiles;
+    }
+
+    function showLightboxUI() {
+      clearTimeout(uiTimer);
+      isUiHidden = false;
+      lbHeader.classList.remove('ui-hidden');
+      lbPrev.classList.remove('ui-hidden');
+      lbNext.classList.remove('ui-hidden');
+      lbBody.classList.remove('hide-cursor');
+
+      if (!helpModal.classList.contains('active')) {
+        uiTimer = setTimeout(() => {
+          hideLightboxUI();
+        }, 1000);
+      }
+    }
+
+    function hideLightboxUI() {
+      if (isDragging || helpModal.classList.contains('active')) return;
+      if (lbVideoModeMenu && lbVideoModeMenu.classList.contains('show')) return;
+      if (lbSpeedMenu && lbSpeedMenu.classList.contains('show')) return;
+      isUiHidden = true;
+      lbHeader.classList.add('ui-hidden');
+      lbPrev.classList.add('ui-hidden');
+      lbNext.classList.add('ui-hidden');
+      lbBody.classList.add('hide-cursor');
+    }
+
+    function toggleLightboxUI() {
+      if (isUiHidden) {
+        showLightboxUI();
+      } else {
+        hideLightboxUI();
+      }
+    }
+
+    lightbox.addEventListener('mousemove', () => {
+      if (lightbox.classList.contains('active')) {
+        showLightboxUI();
+      }
+    });
+
+    lbHeader.addEventListener('mouseenter', () => clearTimeout(uiTimer));
+
+    lbContainer.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('video') || e.target.closest('.help-modal') || e.target.closest('.dropdown-menu')) return;
+      toggleLightboxUI();
+    });
+
+    // ==========================================
+    // HELP MODAL (?) LOGIC
+    // ==========================================
+    function toggleHelpModal() {
+      helpModal.classList.toggle('active');
+      if (helpModal.classList.contains('active')) {
+        clearTimeout(uiTimer);
+      } else {
+        showLightboxUI();
+      }
+    }
+
+    lbHelpBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleHelpModal();
+    });
+
+    helpCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      helpModal.classList.remove('active');
+      showLightboxUI();
+    });
+
+    // ==========================================
+    // ZOOM & PAN LOGIC (ẢNH)
+    // ==========================================
+    function updateTransform() {
+      lbImg.style.transform = `translate(${panX}px, ${panY}px) rotate(${rotation}deg) scale(${zoomLevel})`;
+      const percent = Math.round(zoomLevel * 100);
+      lbZoomVal.textContent = `${percent}%`;
+      lbZoomSlider.value = percent;
+
+      if (zoomLevel > 1) {
+        lbBody.classList.add('panning');
+      } else {
+        lbBody.classList.remove('panning');
+      }
+    }
+
+    function resetView() {
+      zoomLevel = 1;
+      panX = 0;
+      panY = 0;
+      rotation = 0;
+      updateTransform();
+    }
+
+    function setZoom(newZoom) {
+      newZoom = Math.max(0.5, Math.min(newZoom, 5));
+      if (newZoom === 1) {
+        panX = 0;
+        panY = 0;
+      }
+      zoomLevel = parseFloat(newZoom.toFixed(2));
+      updateTransform();
+    }
+
+    lbZoomSlider.addEventListener('input', (e) => {
+      setZoom(parseInt(e.target.value) / 100);
+      showLightboxUI();
+    });
+
+    lbZoomIn.addEventListener('click', () => setZoom(zoomLevel + 0.25));
+    lbZoomOut.addEventListener('click', () => setZoom(zoomLevel - 0.25));
+    lbZoomVal.addEventListener('click', resetView);
+
+    lightbox.addEventListener('wheel', (e) => {
+      const activeList = getActiveMediaList();
+      const current = activeList[currentIndex];
+      if (current && current.type === 'photo') {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.15 : -0.15;
+        setZoom(zoomLevel + delta);
+        showLightboxUI();
+      }
+    }, { passive: false });
+
+    lbBody.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button') || e.target.closest('.lightbox-actions') || e.target.closest('.nav-btn') || e.target.closest('video') || e.target.closest('.help-modal')) return;
+      if (zoomLevel > 1) {
+        isDragging = true;
+        dragStartX = e.clientX - panX;
+        dragStartY = e.clientY - panY;
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging && zoomLevel > 1) {
+        panX = e.clientX - dragStartX;
+        panY = e.clientY - dragStartY;
+        updateTransform();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    lbContainer.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button') || e.target.closest('video') || e.target.closest('.help-modal')) return;
+      const activeList = getActiveMediaList();
+      const current = activeList[currentIndex];
+      if (current && current.type === 'photo') {
+        if (zoomLevel === 1) {
+          setZoom(2);
+        } else {
+          resetView();
+        }
+      }
+    });
+
+    // ==========================================
+    // LIGHTBOX DISPLAY: IMAGE VS VIDEO
+    // ==========================================
+    function openLightbox(index, customList = null) {
+      activePlaybackFiles = customList || null;
+      currentIndex = index;
+      helpModal.classList.remove('active');
+      if (lbVideoModeMenu) lbVideoModeMenu.classList.remove('show');
+      if (lbSpeedMenu) lbSpeedMenu.classList.remove('show');
+      resetView();
+      updateLightboxMedia();
+      lightbox.classList.add('active');
+      showLightboxUI();
+    }
+
+    function closeLightbox() {
+      stopSlideshow();
+      pauseCurrentVideo();
+      clearTimeout(uiTimer);
+      helpModal.classList.remove('active');
+      if (lbVideoModeMenu) lbVideoModeMenu.classList.remove('show');
+      if (lbSpeedMenu) lbSpeedMenu.classList.remove('show');
+      lightbox.classList.remove('active');
+      lbBody.classList.remove('hide-cursor');
+      activePlaybackFiles = null;
+    }
+
+    function pauseCurrentVideo() {
+      if (!lbVideo.paused) {
+        lbVideo.pause();
+      }
+      lbVideo.src = '';
+    }
+
+    function updateLightboxMedia() {
+      const activeList = getActiveMediaList();
+      if (activeList.length === 0) return;
+      const current = activeList[currentIndex];
+
+      lbTitle.textContent = current.name;
+      lbIndex.textContent = `${currentIndex + 1} / ${activeList.length}`;
+
+      if (current.type === 'video') {
+        lbImg.style.display = 'none';
+        lbImg.src = '';
+        lbZoomBox.style.display = 'none';
+        lbRotate.style.display = 'none';
+        lbSlideshowGroup.style.display = 'none';
+        lbVideoModeDropdown.style.display = 'inline-block';
+
+        lbVideo.style.display = 'block';
+        lbVideo.src = current.url;
+        lbVideo.loop = (videoPlaybackMode === 'repeat-one');
+        lbVideo.play().catch(() => {});
+      } else {
+        pauseCurrentVideo();
+        lbVideo.style.display = 'none';
+        lbVideoModeDropdown.style.display = 'none';
+        if (lbVideoModeMenu) lbVideoModeMenu.classList.remove('show');
+
+        lbImg.style.display = 'block';
+        lbZoomBox.style.display = 'inline-flex';
+        lbRotate.style.display = 'flex';
+        lbSlideshowGroup.style.display = 'inline-flex';
+
+        lbImg.src = current.url;
+        resetView();
+      }
+    }
+
+    function nextItem(fromUserAction = false) {
+      const activeList = getActiveMediaList();
+      if (activeList.length === 0) return;
+      currentIndex = (currentIndex + 1) % activeList.length;
+      updateLightboxMedia();
+      if (fromUserAction) {
+        showLightboxUI();
+      }
+    }
+
+    function prevItem(fromUserAction = false) {
+      const activeList = getActiveMediaList();
+      if (activeList.length === 0) return;
+      currentIndex = (currentIndex - 1 + activeList.length) % activeList.length;
+      updateLightboxMedia();
+      if (fromUserAction) {
+        showLightboxUI();
+      }
+    }
+
+    function rotateImage() {
+      const activeList = getActiveMediaList();
+      const current = activeList[currentIndex];
+      if (current && current.type === 'photo') {
+        rotation = (rotation + 90) % 360;
+        updateTransform();
+        showLightboxUI();
+      }
+    }
+
+    function toggleSlideshow() {
+      if (slideshowTimer) {
+        stopSlideshow();
+      } else {
+        startSlideshow();
+      }
+    }
+
+    function startSlideshow() {
+      hideLightboxUI();
+      slideshowTimer = setInterval(() => nextItem(false), slideshowSpeed);
+      slideshowIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+      lbSlideshow.title = "Dừng trình chiếu (Space)";
+    }
+
+    function stopSlideshow() {
+      if (slideshowTimer) {
+        clearInterval(slideshowTimer);
+        slideshowTimer = null;
+        slideshowIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+        lbSlideshow.title = "Tự động trình chiếu (Space)";
+      }
+    }
+
+    lbPrev.addEventListener('click', () => prevItem(true));
+    lbNext.addEventListener('click', () => nextItem(true));
+    lbClose.addEventListener('click', closeLightbox);
+    lbRotate.addEventListener('click', rotateImage);
+    lbSlideshow.addEventListener('click', toggleSlideshow);
+
+    // Video ended event listener
+    lbVideo.addEventListener('ended', () => {
+      if (videoPlaybackMode === 'repeat-one') {
+        lbVideo.currentTime = 0;
+        lbVideo.play().catch(() => {});
+        return;
+      }
+
+      const activeList = getActiveMediaList();
+      const videoIndices = [];
+      activeList.forEach((file, idx) => {
+        if (file.type === 'video') videoIndices.push(idx);
+      });
+
+      if (videoIndices.length === 0) return;
+
+      if (videoPlaybackMode === 'repeat-all') {
+        let nextIdx = -1;
+        for (let i = 0; i < videoIndices.length; i++) {
+          if (videoIndices[i] > currentIndex) {
+            nextIdx = videoIndices[i];
+            break;
+          }
+        }
+        if (nextIdx === -1) {
+          nextIdx = videoIndices[0];
+        }
+        currentIndex = nextIdx;
+        updateLightboxMedia();
+      } else if (videoPlaybackMode === 'play-next') {
+        let nextIdx = -1;
+        for (let i = 0; i < videoIndices.length; i++) {
+          if (videoIndices[i] > currentIndex) {
+            nextIdx = videoIndices[i];
+            break;
+          }
+        }
+        if (nextIdx !== -1) {
+          currentIndex = nextIdx;
+          updateLightboxMedia();
+        } else {
+          showToast('Đã phát hết danh sách video');
+        }
+      } else if (videoPlaybackMode === 'shuffle-repeat') {
+        let candidates = videoIndices;
+        if (videoIndices.length > 1) {
+          candidates = videoIndices.filter(idx => idx !== currentIndex);
+        }
+        const randomIdx = candidates[Math.floor(Math.random() * candidates.length)];
+        currentIndex = randomIdx;
+        updateLightboxMedia();
+      }
+    });
+
+    
+    // ==========================================
+    // CỬ CHỈ CẢM ỨNG (TOUCH GESTURES CHO IPHONE / IPAD)
+    // ==========================================
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    lbBody.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+      }
+    }, { passive: true });
+
+    lbBody.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length === 1) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        const timeDiff = Date.now() - touchStartTime;
+
+        // Chỉ vuốt khi không phóng to (zoomLevel === 1)
+        if (zoomLevel === 1 && timeDiff < 600) {
+          // Vuốt ngang đổi bài: sang trái -> next, sang phải -> prev
+          if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+            if (deltaX < 0) {
+              nextItem(true);
+            } else {
+              prevItem(true);
+            }
+          }
+          // Vuốt dọc xuống để đóng lightbox
+          else if (deltaY > 90 && Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
+            closeLightbox();
+          }
+        }
+      }
+    }, { passive: true });
+
+    // Tự động thu gọn sidebar trên màn hình hẹp (iPhone) khi mở trang
+    if (window.innerWidth <= 768 && albumSidebar) {
+      albumSidebar.classList.add('collapsed');
+    }
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      // Toggle sidebar on B key when not in lightbox
+      if (!lightbox.classList.contains('active') && (e.key === 'b' || e.key === 'B')) {
+        albumSidebar.classList.toggle('collapsed');
+        return;
+      }
+
+      if (!lightbox.classList.contains('active') && (e.key === 't' || e.key === 'T')) {
+        mainHeader.classList.toggle('hidden-bar');
+        return;
+      }
+
+      if (e.key === 'f' || e.key === 'F') {
+        toggleFullScreen();
+        return;
+      }
+
+      if (!lightbox.classList.contains('active')) {
+        if (e.key === 'Escape' && selectedKeys.size > 0) {
+          clearSelection();
+        }
+        return;
+      }
+
+      // In Lightbox
+      if (e.key === 'ArrowRight') {
+        nextItem(true);
+      } else if (e.key === 'ArrowLeft') {
+        prevItem(true);
+      } else if (e.key === 'Escape') {
+        if (helpModal.classList.contains('active')) {
+          helpModal.classList.remove('active');
+        } else {
+          closeLightbox();
+        }
+      } else if (e.key === '?' || e.key === '/') {
+        toggleHelpModal();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        deleteCurrentItem();
+      } else if (e.key === 'r' || e.key === 'R') {
+        rotateImage();
+      } else if (e.key === 'm' || e.key === 'M') {
+        const activeList = getActiveMediaList();
+        const current = activeList[currentIndex];
+        if (current && current.type === 'video') {
+          cycleVideoPlaybackMode();
+        }
+      } else if (e.key === 's' || e.key === 'S') {
+        const activeList = getActiveMediaList();
+        const current = activeList[currentIndex];
+        if (current && current.type === 'photo') {
+          cycleSlideshowSpeed();
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        const activeList = getActiveMediaList();
+        const current = activeList[currentIndex];
+        if (current && current.type === 'video') {
+          if (lbVideo.paused) {
+            lbVideo.play();
+          } else {
+            lbVideo.pause();
+          }
+        } else {
+          toggleSlideshow();
+        }
+      } else if (e.key === '=' || e.key === '+') {
+        setZoom(zoomLevel + 0.25);
+      } else if (e.key === '-' || e.key === '_') {
+        setZoom(zoomLevel - 0.25);
+      } else if (e.key === '0') {
+        resetView();
+      } else if (e.key === 'h' || e.key === 'H') {
+        toggleLightboxUI();
+      }
+    });
+  </script>
+</body>
+</html>
