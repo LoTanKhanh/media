@@ -297,6 +297,94 @@
       border-right: none;
     }
 
+    /* Sidebar auto-hide, edge tab and pin controls */
+    #sidebar-edge-tab {
+      position: fixed;
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 60px;
+      background: rgba(30, 36, 50, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.18);
+      border-left: none;
+      border-radius: 0 10px 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 990;
+      color: #94a3b8;
+      box-shadow: 2px 0 12px rgba(0,0,0,.4);
+      transition: width .2s ease, background .2s ease, color .2s ease;
+    }
+    #sidebar-edge-tab:hover { width: 32px; background: #3b82f6; color: #fff; }
+    #sidebar-edge-tab svg { width: 16px; height: 16px; fill: currentColor; }
+
+    #sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      z-index: 998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease;
+    }
+    #sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
+
+    #album-sidebar.sidebar-overlay {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      bottom: 0 !important;
+      width: 280px !important;
+      max-width: 82vw !important;
+      min-width: 0 !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      padding: 16px 12px !important;
+      opacity: 1 !important;
+      overflow-y: auto !important;
+      transform: translateX(-100%);
+      z-index: 999 !important;
+      background: #0f131a !important;
+      box-shadow: 6px 0 30px rgba(0,0,0,.6) !important;
+      transition: transform .28s cubic-bezier(.2,.8,.2,1);
+    }
+    #album-sidebar.sidebar-overlay.show,
+    #album-sidebar.sidebar-overlay.pinned { transform: translateX(0) !important; }
+    .sidebar-pin-btn {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .sidebar-pin-btn.active { background: rgba(59,130,246,.2); border-color: #3b82f6; color: #60a5fa; }
+    .sidebar-close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 4px 6px;
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: 4px;
+    }
+    .sidebar-close-btn:hover { color: #fff; background: rgba(255,255,255,.1); }
+    @media (min-width: 769px) {
+      body.sidebar-pinned .app-layout { margin-left: 280px; }
+    }
+
     .sidebar-section {
       display: flex;
       flex-direction: column;
@@ -1148,6 +1236,11 @@
 </head>
 <body>
 
+  <div id="sidebar-edge-tab" title="Mở danh sách Album (rê chuột hoặc bấm)">
+    <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+  </div>
+  <div id="sidebar-backdrop"></div>
+
   <!-- Gallery Top Toolbar -->
   <header id="main-header">
     <div class="brand" style="display:flex;align-items:center;gap:10px;">
@@ -1231,6 +1324,12 @@
       <div class="sidebar-section">
         <div class="sidebar-section-header">
           <span>Thư viện</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button id="btn-pin-sidebar" title="Ghim thanh bên" class="sidebar-pin-btn">
+              <span aria-hidden="true">📌</span><span class="pin-text">Ghim</span>
+            </button>
+            <button id="btn-close-sidebar" class="sidebar-close-btn" title="Đóng thanh bên">✕</button>
+          </div>
         </div>
         <div class="album-nav-item active" id="album-nav-all" data-album-id="all">
           <div class="album-item-left">
@@ -3305,6 +3404,70 @@
         toggleLightboxUI();
       }
     });
+
+    // Sidebar hover, 1-second hide timer, pin persistence and mobile backdrop.
+    (function initSidebarControls() {
+      const sidebar = document.getElementById('album-sidebar');
+      const edgeTab = document.getElementById('sidebar-edge-tab');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const pinBtn = document.getElementById('btn-pin-sidebar');
+      const closeBtn = document.getElementById('btn-close-sidebar');
+      if (!sidebar) return;
+
+      sidebar.classList.add('sidebar-overlay');
+      let isPinned = localStorage.getItem('mediaviewer_sidebar_pinned') === 'true';
+      let sidebarHideTimer = null;
+
+      function updatePinState() {
+        sidebar.classList.toggle('pinned', isPinned);
+        document.body.classList.toggle('sidebar-pinned', isPinned);
+        if (pinBtn) {
+          pinBtn.classList.toggle('active', isPinned);
+          const text = pinBtn.querySelector('.pin-text');
+          if (text) text.textContent = isPinned ? 'Đã ghim' : 'Ghim';
+        }
+      }
+
+      function openSidebar() {
+        clearTimeout(sidebarHideTimer);
+        sidebarHideTimer = null;
+        sidebar.classList.add('show');
+        if (window.innerWidth <= 768) backdrop?.classList.add('show');
+      }
+
+      function closeSidebar(immediate = false) {
+        if (isPinned && window.innerWidth > 768) return;
+        clearTimeout(sidebarHideTimer);
+        if (immediate) {
+          sidebar.classList.remove('show');
+          backdrop?.classList.remove('show');
+        } else {
+          sidebarHideTimer = setTimeout(() => {
+            sidebar.classList.remove('show');
+            backdrop?.classList.remove('show');
+          }, 1000);
+        }
+      }
+
+      sidebar.addEventListener('mouseenter', openSidebar);
+      sidebar.addEventListener('mouseleave', () => closeSidebar(false));
+      edgeTab?.addEventListener('mouseenter', openSidebar);
+      edgeTab?.addEventListener('click', () => sidebar.classList.contains('show') ? closeSidebar(true) : openSidebar());
+      backdrop?.addEventListener('click', () => closeSidebar(true));
+      closeBtn?.addEventListener('click', (e) => { e.stopPropagation(); closeSidebar(true); });
+      pinBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        isPinned = !isPinned;
+        localStorage.setItem('mediaviewer_sidebar_pinned', String(isPinned));
+        updatePinState();
+        if (isPinned) openSidebar(); else closeSidebar(false);
+      });
+      sidebar.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && e.target.closest('.album-nav-item')) closeSidebar(true);
+      });
+
+      updatePinState();
+    })();
   </script>
 </body>
 </html>
