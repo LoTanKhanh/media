@@ -1188,14 +1188,14 @@
           <svg style="width:12px;height:12px;fill:currentColor;margin-left:2px;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
         </button>
         <div id="open-dropdown-menu" class="dropdown-menu">
-          <label class="dropdown-item" id="menu-select-folder" for="dir-input">
+          <div class="dropdown-item" id="menu-select-folder">
             <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
             <span>📁 Thêm cả Folder</span>
-          </label>
-          <label class="dropdown-item" id="menu-select-files" for="file-input">
+          </div>
+          <div class="dropdown-item" id="menu-select-files">
             <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z"/></svg>
             <span>🖼️ Thêm File cụ thể</span>
-          </label>
+          </div>
         </div>
       </div>
 
@@ -1215,8 +1215,8 @@
         <span>Ẩn thanh</span>
       </button>
 
-      <input type="file" id="dir-input" webkitdirectory directory multiple style="position:fixed;top:-1000px;left:-1000px;opacity:0.001;pointer-events:none;width:1px;height:1px;z-index:-1;" />
-      <input type="file" id="file-input" multiple accept="image/*,video/*" style="position:fixed;top:-1000px;left:-1000px;opacity:0.001;pointer-events:none;width:1px;height:1px;z-index:-1;" />
+      <input type="file" id="dir-input" webkitdirectory directory multiple style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;opacity:0.01;" />
+      <input type="file" id="file-input" multiple accept="image/*,video/*,.heic,.heif,.3gp,.mkv,.avi,.ts" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;opacity:0.01;" />
     </div>
   </header>
 
@@ -1297,13 +1297,13 @@
         <p id="empty-state-desc">Bấm chọn thư mục hoặc file để bắt đầu xem. Các file sẽ được <b>tự động ghi nhớ trên trình duyệt</b>, lần sau mở lại web sẽ tự hiện lên ngay!</p>
         
         <div class="folder-buttons" id="empty-folder-buttons">
-          <label class="btn btn-primary" id="btn-empty-folder" for="dir-input" style="cursor:pointer;">
+          <button class="btn btn-primary" id="btn-empty-folder">
             <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
             <span>Chọn Cả Folder</span>
-          </label>
-          <label class="btn" id="btn-empty-files" for="file-input" style="cursor:pointer;">
+          </button>
+          <button class="btn" id="btn-empty-files">
             <span>Chọn File Cụ Thể</span>
-          </label>
+          </button>
         </div>
       </div>
 
@@ -2213,7 +2213,9 @@
     });
 
     window.addEventListener('click', (e) => {
-      openDropdownMenu.classList.remove('show');
+      if (!e.target.closest('.dropdown')) {
+        openDropdownMenu.classList.remove('show');
+      }
       if (lbVideoModeMenu && !e.target.closest('#lb-video-mode-dropdown')) {
         lbVideoModeMenu.classList.remove('show');
       }
@@ -2248,6 +2250,11 @@
     lbVideoModeMenu.addEventListener('mouseenter', () => clearTimeout(uiTimer));
     lbSpeedMenu.addEventListener('mouseenter', () => clearTimeout(uiTimer));
 
+    function clearFileInputs() {
+      try { if (dirInput) dirInput.value = ''; } catch(err) {}
+      try { if (fileInput) fileInput.value = ''; } catch(err) {}
+    }
+
     async function scanDirectoryHandle(dirHandle, pathSegments = [], gatheredFiles = []) {
       for await (const entry of dirHandle.values()) {
         if (entry.kind === 'file') {
@@ -2260,11 +2267,27 @@
       }
     }
 
+    // Check iOS and iPadOS accurately
+    function isAppleTouchDevice() {
+      return /iPhone|iPad|iPod/.test(navigator.userAgent) || 
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
     async function triggerFolderPicker() {
-      openDropdownMenu.classList.remove('show');
+      clearFileInputs();
+
+      // On iPhone / iPad (iOS / iPadOS), WebKit blocks folder selecting
+      if (isAppleTouchDevice()) {
+        showToast('Trên iPhone & iPad, hệ điều hành chỉ hỗ trợ chọn nhiều ảnh/video trực tiếp', 3500);
+        fileInput.click();
+        setTimeout(() => openDropdownMenu.classList.remove('show'), 150);
+        return;
+      }
+
       if (window.showDirectoryPicker) {
         try {
           const dirHandle = await window.showDirectoryPicker();
+          openDropdownMenu.classList.remove('show');
           const files = [];
           await scanDirectoryHandle(dirHandle, [], files);
           if (files.length > 0) {
@@ -2272,36 +2295,57 @@
             return;
           }
         } catch (err) {
-          if (err.name === 'AbortError') return;
+          if (err.name === 'AbortError') {
+            openDropdownMenu.classList.remove('show');
+            return;
+          }
           console.warn('showDirectoryPicker fallback:', err);
         }
       }
+
       dirInput.click();
+      setTimeout(() => openDropdownMenu.classList.remove('show'), 150);
     }
 
     function triggerFilePicker() {
-      openDropdownMenu.classList.remove('show');
+      clearFileInputs();
       fileInput.click();
+      setTimeout(() => openDropdownMenu.classList.remove('show'), 150);
     }
 
-    menuSelectFolder.addEventListener('click', () => {
-      openDropdownMenu.classList.remove('show');
+    menuSelectFolder.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerFolderPicker();
     });
-    menuSelectFiles.addEventListener('click', () => {
-      openDropdownMenu.classList.remove('show');
+    menuSelectFiles.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerFilePicker();
+    });
+    btnEmptyFolder.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerFolderPicker();
+    });
+    btnEmptyFiles.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerFilePicker();
     });
 
-    // iPhone compatibility: iPhone doesn't support webkitdirectory, route to file-input
-    if (/iPhone|iPod/.test(navigator.userAgent)) {
-      if (dirInput) {
-        dirInput.removeAttribute('webkitdirectory');
-        dirInput.removeAttribute('directory');
+    dirInput.addEventListener('change', (e) => {
+      const files = e.target.files ? Array.from(e.target.files) : [];
+      clearFileInputs();
+      if (files.length > 0) {
+        loadFiles(files);
       }
-      if (btnEmptyFolder) btnEmptyFolder.setAttribute('for', 'file-input');
-      if (menuSelectFolder) menuSelectFolder.setAttribute('for', 'file-input');
-    }
+    });
 
-    // Xóa tất cả (Clear All)
+    fileInput.addEventListener('change', (e) => {
+      const files = e.target.files ? Array.from(e.target.files) : [];
+      clearFileInputs();
+      if (files.length > 0) {
+        loadFiles(files);
+      }
+    });
+
     async function clearAllMedia() {
       if (rawFiles.length === 0) return;
       if (confirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh, video và album đã lưu không?')) {
@@ -2351,18 +2395,6 @@
       }
     }
     lbDeleteCurrent.addEventListener('click', deleteCurrentItem);
-
-    dirInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        loadFiles(Array.from(e.target.files));
-      }
-    });
-
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        loadFiles(Array.from(e.target.files));
-      }
-    });
 
     function toggleFullScreen() {
       if (!document.fullscreenElement && !document.webkitFullscreenElement) {
