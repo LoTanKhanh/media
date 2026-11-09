@@ -1162,14 +1162,14 @@
           <svg style="width:12px;height:12px;fill:currentColor;margin-left:2px;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
         </button>
         <div id="open-dropdown-menu" class="dropdown-menu">
-          <div class="dropdown-item" id="menu-select-folder">
+          <label class="dropdown-item" id="menu-select-folder" for="dir-input">
             <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
             <span>📁 Thêm cả Folder</span>
-          </div>
-          <div class="dropdown-item" id="menu-select-files">
+          </label>
+          <label class="dropdown-item" id="menu-select-files" for="file-input">
             <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z"/></svg>
             <span>🖼️ Thêm File cụ thể</span>
-          </div>
+          </label>
         </div>
       </div>
 
@@ -1189,8 +1189,8 @@
         <span>Ẩn thanh</span>
       </button>
 
-      <input type="file" id="dir-input" webkitdirectory directory multiple style="display:none;" />
-      <input type="file" id="file-input" multiple accept="image/*,video/*" style="display:none;" />
+      <input type="file" id="dir-input" webkitdirectory directory multiple style="position:fixed;top:-1000px;left:-1000px;opacity:0.001;pointer-events:none;width:1px;height:1px;z-index:-1;" />
+      <input type="file" id="file-input" multiple accept="image/*,video/*" style="position:fixed;top:-1000px;left:-1000px;opacity:0.001;pointer-events:none;width:1px;height:1px;z-index:-1;" />
     </div>
   </header>
 
@@ -1271,13 +1271,13 @@
         <p id="empty-state-desc">Bấm chọn thư mục hoặc file để bắt đầu xem. Các file sẽ được <b>tự động ghi nhớ trên trình duyệt</b>, lần sau mở lại web sẽ tự hiện lên ngay!</p>
         
         <div class="folder-buttons" id="empty-folder-buttons">
-          <button class="btn btn-primary" id="btn-empty-folder">
+          <label class="btn btn-primary" id="btn-empty-folder" for="dir-input" style="cursor:pointer;">
             <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-            Chọn Cả Folder
-          </button>
-          <button class="btn" id="btn-empty-files">
-            Chọn File Cụ Thể
-          </button>
+            <span>Chọn Cả Folder</span>
+          </label>
+          <label class="btn" id="btn-empty-files" for="file-input" style="cursor:pointer;">
+            <span>Chọn File Cụ Thể</span>
+          </label>
         </div>
       </div>
 
@@ -2258,10 +2258,22 @@
       fileInput.click();
     }
 
-    menuSelectFolder.addEventListener('click', triggerFolderPicker);
-    menuSelectFiles.addEventListener('click', triggerFilePicker);
-    btnEmptyFolder.addEventListener('click', triggerFolderPicker);
-    btnEmptyFiles.addEventListener('click', triggerFilePicker);
+    menuSelectFolder.addEventListener('click', () => {
+      openDropdownMenu.classList.remove('show');
+    });
+    menuSelectFiles.addEventListener('click', () => {
+      openDropdownMenu.classList.remove('show');
+    });
+
+    // iPhone compatibility: iPhone doesn't support webkitdirectory, route to file-input
+    if (/iPhone|iPod/.test(navigator.userAgent)) {
+      if (dirInput) {
+        dirInput.removeAttribute('webkitdirectory');
+        dirInput.removeAttribute('directory');
+      }
+      if (btnEmptyFolder) btnEmptyFolder.setAttribute('for', 'file-input');
+      if (menuSelectFolder) menuSelectFolder.setAttribute('for', 'file-input');
+    }
 
     // Xóa tất cả (Clear All)
     async function clearAllMedia() {
