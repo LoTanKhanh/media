@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <title>Offline Media Viewer (Photo & Video)</title>
   <style>
     :root {
@@ -1059,6 +1059,32 @@
       transform: translateX(-50%) translateY(0);
     }
   
+    
+    /* Safe Area & Touch Optimization */
+    html, body {
+      touch-action: manipulation;
+    }
+
+    header {
+      padding-top: max(8px, env(safe-area-inset-top));
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+
+    .lightbox-header {
+      padding-top: max(8px, env(safe-area-inset-top));
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+
+    .batch-bar {
+      bottom: max(20px, calc(env(safe-area-inset-bottom) + 10px));
+    }
+
+    .toast {
+      bottom: max(20px, calc(env(safe-area-inset-bottom) + 10px));
+    }
+
     /* Mobile & Tablet Responsiveness (iPhone / iPad) */
     @media (max-width: 768px) {
       header {
@@ -1483,8 +1509,8 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-    const VIDEO_EXTS = ['.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi', '.ts'];
+    const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif', '.bmp', '.svg'];
+    const VIDEO_EXTS = ['.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi', '.ts', '.3gp'];
 
     // State
     let rawFiles = [];
@@ -3092,21 +3118,54 @@
 
     
     // ==========================================
-    // CỬ CHỈ CẢM ỨNG (TOUCH GESTURES CHO IPHONE / IPAD)
+    // CỬ CHỈ CẢM ỨNG TOÀN DIỆN (TOUCH, SWIPE & PINCH-ZOOM CHO IPHONE / IPAD)
     // ==========================================
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
+    let touchPinchDist = 0;
+    let initialZoom = 1;
+    let touchPanStartX = 0;
+    let touchPanStartY = 0;
 
     lbBody.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
+      if (e.touches.length === 2) {
+        // Bắt đầu chụm 2 ngón tay thu phóng (Pinch-to-zoom)
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        touchPinchDist = Math.hypot(dx, dy);
+        initialZoom = zoomLevel;
+      } else if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
+        if (zoomLevel > 1) {
+          touchPanStartX = e.touches[0].clientX - panX;
+          touchPanStartY = e.touches[0].clientY - panY;
+        }
+      }
+    }, { passive: true });
+
+    lbBody.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && touchPinchDist > 0) {
+        // Thu phóng bằng 2 ngón tay
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const currentDist = Math.hypot(dx, dy);
+        const factor = currentDist / touchPinchDist;
+        setZoom(initialZoom * factor);
+      } else if (e.touches.length === 1 && zoomLevel > 1) {
+        // Kéo di chuyển ảnh khi đã phóng to
+        panX = e.touches[0].clientX - touchPanStartX;
+        panY = e.touches[0].clientY - touchPanStartY;
+        updateTransform();
       }
     }, { passive: true });
 
     lbBody.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        touchPinchDist = 0;
+      }
       if (e.changedTouches.length === 1) {
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
@@ -3114,17 +3173,17 @@
         const deltaY = touchEndY - touchStartY;
         const timeDiff = Date.now() - touchStartTime;
 
-        // Chỉ vuốt khi không phóng to (zoomLevel === 1)
-        if (zoomLevel === 1 && timeDiff < 600) {
+        // Chỉ vuốt chuyển ảnh/video khi đang ở kích thước chuẩn (zoomLevel === 1)
+        if (zoomLevel === 1 && timeDiff < 500) {
           // Vuốt ngang đổi bài: sang trái -> next, sang phải -> prev
-          if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+          if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
             if (deltaX < 0) {
               nextItem(true);
             } else {
               prevItem(true);
             }
           }
-          // Vuốt dọc xuống để đóng lightbox
+          // Vuốt dọc xuống để đóng trình xem
           else if (deltaY > 90 && Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
             closeLightbox();
           }
