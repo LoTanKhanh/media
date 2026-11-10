@@ -1233,73 +1233,72 @@
     }
 
   
-/* ===== FIX VIỀN ĐEN TRÊN DƯỚI ĐỀU 100% TRÊN IPHONE/IPAD ===== */
-.viewer-modal, #mediaViewerModal, #lightbox, .modal-backdrop {
-  height: 100vh !important;
-  height: 100dvh !important;
-  width: 100vw !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
-  box-sizing: border-box !important;
-  position: fixed !important;
-  inset: 0 !important;
-  background: #000000 !important;
-  z-index: 10000 !important;
+/* ===== LIGHTBOX iPhone/iPad: phủ kín màn hình, viền đen trên/dưới đều nhau ===== */
+#lightbox {
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background: #000;
+  z-index: 10000;
+}
+.lightbox-body,
+.lightbox-media-container {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+.lightbox-media-container img,
+.lightbox-media-container video {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+/* Video: chừa vùng an toàn để thanh thời gian không bị thanh Home đè */
+.lightbox-media-container.is-video {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+}
+/* Header nổi, tránh tai thỏ / Dynamic Island, không đẩy ảnh */
+.lightbox-header {
+  height: auto;
+  min-height: 56px;
+  padding-top: calc(env(safe-area-inset-top) + 6px);
+  padding-bottom: 6px;
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+}
+@media (max-width: 768px) {
+  .lightbox-actions { gap: 6px; }
+  .lightbox-info { max-width: 36%; }
+  /* iPhone không có Fullscreen API, bỏ 2 nút này cho đủ chỗ nút Đóng */
+  #lb-fullscreen, #lb-help-btn { display: none; }
 }
 
-.viewer-media-container, #mediaContainer {
-  flex: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100% !important;
-  height: 100% !important;
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-.viewer-media-container img, 
-.viewer-media-container video,
-#mediaContainer img, 
-#mediaContainer video {
-  max-width: 100% !important;
-  max-height: 100% !important;
-  object-fit: contain !important;
-  margin: auto !important;
-  display: block !important;
-}
-
-/* HIỂN THỊ ĐẦY ĐỦ THANH ĐIỀU KHIỂN & TIMELINE VIDEO */
-video::-webkit-media-controls-panel {
-  bottom: env(safe-area-inset-bottom, 15px) !important;
-}
-
-/* NÚT ĐÓNG VÀ HEADER DẠNG NỔI - KHÔNG ĐẨY ẢNH XUỐNG DƯỚI */
-.viewer-header, .modal-header, .viewer-close-btn {
-  position: absolute !important;
-  top: max(16px, env(safe-area-inset-top) + 8px) !important;
-  right: max(16px, env(safe-area-inset-right) + 8px) !important;
-  z-index: 10005 !important;
-}
-
-/* CHECKBOX CHỌN ALBUM */
+/* ===== CHỌN NHIỀU ALBUM ĐỂ XÓA ===== */
 .album-checkbox {
   width: 18px;
   height: 18px;
   margin-right: 8px;
   accent-color: #ef4444;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .album-manage-bar {
   display: flex;
-  gap: 8px;
-  padding: 8px 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
   background: rgba(255,255,255,0.05);
   border-radius: 8px;
-  margin: 8px 0;
+  margin: 6px 0;
 }
+.album-manage-bar .btn { padding: 4px 8px; font-size: 12px; }
+.album-manage-bar .btn:disabled { opacity: 0.4; pointer-events: none; }
+#btn-select-albums.active { color: var(--accent); }
 
 </style>
 </head>
@@ -1413,9 +1412,17 @@ video::-webkit-media-controls-panel {
       <div class="sidebar-section">
         <div class="sidebar-section-header">
           <span>Album của bạn</span>
-          <button id="btn-create-album" class="btn-icon-subtle" title="Tạo Album mới">
+          <div style="display:flex;gap:4px;align-items:center;"><button id="btn-select-albums" class="btn-icon-subtle" title="Chọn nhiều album để xóa">
+              <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </button>
+            <button id="btn-create-album" class="btn-icon-subtle" title="Tạo Album mới">
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          </button>
+          </button></div>
+        </div>
+        <div id="album-manage-bar" class="album-manage-bar" style="display:none;">
+          <button id="btn-album-select-all" class="btn">Chọn hết</button>
+          <button id="btn-album-delete-selected" class="btn btn-danger"><span>Xóa (0)</span></button>
+          <button id="btn-album-select-cancel" class="btn">Hủy</button>
         </div>
         <div id="custom-albums-list" style="display:flex;flex-direction:column;gap:3px;">
           <!-- Custom albums rendered by JS -->
@@ -1687,6 +1694,8 @@ video::-webkit-media-controls-panel {
     let currentAlbumId = 'all'; // 'all', 'unassigned', or custom album id
     let selectedKeys = new Set();
     let isSelectionMode = false;
+    let isAlbumSelectMode = false;
+    const selectedAlbumIds = new Set();
     let activePlaybackFiles = null;
 
     let currentIndex = 0;
@@ -1731,6 +1740,11 @@ video::-webkit-media-controls-panel {
     // Album Sidebar & Header Elements
     const albumSidebar = document.getElementById('album-sidebar');
     const btnCreateAlbum = document.getElementById('btn-create-album');
+    const btnSelectAlbums = document.getElementById('btn-select-albums');
+    const albumManageBar = document.getElementById('album-manage-bar');
+    const btnAlbumSelectAll = document.getElementById('btn-album-select-all');
+    const btnAlbumDeleteSelected = document.getElementById('btn-album-delete-selected');
+    const btnAlbumSelectCancel = document.getElementById('btn-album-select-cancel');
     const customAlbumsList = document.getElementById('custom-albums-list');
     const albumNavAll = document.getElementById('album-nav-all');
     const badgeCountAll = document.getElementById('badge-count-all');
@@ -1990,6 +2004,32 @@ video::-webkit-media-controls-panel {
       });
     }
 
+    function deleteMediaRecordsBatch(keys) {
+      if (!db || !keys || keys.length === 0) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('media', 'readwrite');
+          const store = tx.objectStore('media');
+          keys.forEach(k => store.delete(k));
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
+    function deleteAlbumRecords(ids) {
+      if (!db || !ids || ids.length === 0) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('albums', 'readwrite');
+          const store = tx.objectStore('albums');
+          ids.forEach(id => store.delete(id));
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
     function loadAllFromDB() {
       if (!db) return Promise.resolve([]);
       return new Promise((resolve) => {
@@ -2191,11 +2231,21 @@ video::-webkit-media-controls-panel {
           <span class="album-badge">${albCount}</span>
         `;
 
-        div.addEventListener('click', () => {
+        div.addEventListener('click', (e) => {
+          if (isAlbumSelectMode) { handleAlbumCheckClick(e, alb.id, div); return; }
           currentAlbumId = alb.id;
           renderAlbumSidebar();
           applyFilterAndRender();
         });
+
+        if (isAlbumSelectMode) {
+          const left = div.querySelector('.album-item-left');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className = 'album-checkbox';
+          cb.checked = selectedAlbumIds.has(alb.id);
+          left.insertBefore(cb, left.firstChild);
+        }
 
         setupAlbumDropTarget(div, alb.id);
         customAlbumsList.appendChild(div);
@@ -2217,7 +2267,76 @@ video::-webkit-media-controls-panel {
 
       // Update Batch Album Dropdown menu
       updateBatchAlbumMenu();
+
+      // Nút "Xóa tất cả": đổi nhãn theo album đang xem
+      const clearLabel = btnClearAll.querySelector('span');
+      if (clearLabel) clearLabel.textContent = (currentAlbumId === 'all') ? 'Xóa tất cả' : 'Xóa file trong album';
+      updateAlbumManageBar();
     }
+
+    function handleAlbumCheckClick(e, id, div) {
+      const cb = div.querySelector('.album-checkbox');
+      if (!cb) return;
+      if (e.target !== cb) cb.checked = !cb.checked;
+      if (cb.checked) selectedAlbumIds.add(id); else selectedAlbumIds.delete(id);
+      updateAlbumManageBar();
+    }
+
+    function updateAlbumManageBar() {
+      for (const id of Array.from(selectedAlbumIds)) {
+        if (!albums.some(a => a.id === id)) selectedAlbumIds.delete(id);
+      }
+      albumManageBar.style.display = isAlbumSelectMode ? 'flex' : 'none';
+      btnSelectAlbums.classList.toggle('active', isAlbumSelectMode);
+      btnAlbumDeleteSelected.querySelector('span').textContent = `Xóa (${selectedAlbumIds.size})`;
+      btnAlbumDeleteSelected.disabled = selectedAlbumIds.size === 0;
+    }
+
+    function exitAlbumSelectMode() {
+      isAlbumSelectMode = false;
+      selectedAlbumIds.clear();
+      renderAlbumSidebar();
+    }
+
+    btnSelectAlbums.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (isAlbumSelectMode) { exitAlbumSelectMode(); return; }
+      if (albums.length === 0) { showToast('Chưa có album nào để chọn'); return; }
+      isAlbumSelectMode = true;
+      renderAlbumSidebar();
+    });
+
+    btnAlbumSelectCancel.addEventListener('click', exitAlbumSelectMode);
+
+    btnAlbumSelectAll.addEventListener('click', () => {
+      if (selectedAlbumIds.size === albums.length) selectedAlbumIds.clear();
+      else albums.forEach(a => selectedAlbumIds.add(a.id));
+      renderAlbumSidebar();
+    });
+
+    btnAlbumDeleteSelected.addEventListener('click', async () => {
+      const ids = Array.from(selectedAlbumIds);
+      if (ids.length === 0) return;
+      const idSet = new Set(ids);
+      const names = albums.filter(a => idSet.has(a.id)).map(a => `"${a.name}"`).join(', ');
+      if (!confirm(`Xóa ${ids.length} album: ${names}?\nCác file trong album vẫn được giữ lại trong "Tất cả file".`)) return;
+
+      const moved = rawFiles.filter(f => idSet.has(f.albumId));
+      moved.forEach(f => { f.albumId = null; });
+      await saveMediaRecordsBatch(moved.map(f => ({
+        key: f.key, name: f.name, size: f.size, lastModified: f.lastModified,
+        type: f.type, albumId: null, blob: f.blob
+      })));
+      await deleteAlbumRecords(ids);
+      albums = albums.filter(a => !idSet.has(a.id));
+      if (idSet.has(currentAlbumId)) currentAlbumId = 'all';
+
+      isAlbumSelectMode = false;
+      selectedAlbumIds.clear();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+      showToast(`Đã xóa ${ids.length} album`);
+    });
 
     function updateBatchAlbumMenu() {
       if (!batchAlbumMenu) return;
@@ -2515,19 +2634,41 @@ video::-webkit-media-controls-panel {
     });
 
     async function clearAllMedia() {
-      if (rawFiles.length === 0) return;
-      if (confirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh, video và album đã lưu không?')) {
-        await clearAllFromDB();
-        rawFiles.forEach(item => URL.revokeObjectURL(item.url));
-        rawFiles = [];
-        albums = [];
-        displayedFiles = [];
-        currentAlbumId = 'all';
-        clearSelection();
-        renderAlbumSidebar();
-        applyFilterAndRender();
-        showToast('Đã xóa sạch toàn bộ dữ liệu');
+      if (currentAlbumId === 'all') {
+        // Đang ở "Tất cả file": xóa toàn bộ thư viện
+        if (rawFiles.length === 0) return;
+        if (confirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh, video và album đã lưu không?')) {
+          await clearAllFromDB();
+          rawFiles.forEach(item => URL.revokeObjectURL(item.url));
+          rawFiles = [];
+          albums = [];
+          displayedFiles = [];
+          currentAlbumId = 'all';
+          isAlbumSelectMode = false;
+          selectedAlbumIds.clear();
+          clearSelection();
+          renderAlbumSidebar();
+          applyFilterAndRender();
+          showToast('Đã xóa sạch toàn bộ dữ liệu');
+        }
+        return;
       }
+
+      // Đang ở một album: chỉ xóa file của album này, album khác giữ nguyên
+      const album = albums.find(a => a.id === currentAlbumId);
+      const targets = rawFiles.filter(f => f.albumId === currentAlbumId);
+      if (targets.length === 0) { showToast('Album này đang trống'); return; }
+      const albumName = album ? album.name : '';
+      if (!confirm(`Xóa ${targets.length} file trong album "${albumName}"?\nCác album khác không bị ảnh hưởng.`)) return;
+
+      await deleteMediaRecordsBatch(targets.map(f => f.key));
+      targets.forEach(f => URL.revokeObjectURL(f.url));
+      const gone = new Set(targets.map(f => f.key));
+      rawFiles = rawFiles.filter(f => !gone.has(f.key));
+      clearSelection();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+      showToast(`Đã xóa ${targets.length} file trong album "${albumName}"`);
     }
     btnClearAll.addEventListener('click', clearAllMedia);
 
@@ -3173,6 +3314,7 @@ video::-webkit-media-controls-panel {
 
       lbTitle.textContent = current.name;
       lbIndex.textContent = `${currentIndex + 1} / ${activeList.length}`;
+      lbContainer.classList.toggle('is-video', current.type === 'video');
 
       if (current.type === 'video') {
         lbImg.style.display = 'none';
@@ -3532,53 +3674,11 @@ video::-webkit-media-controls-panel {
         if (isPinned) openSidebar(); else closeSidebar(false);
       });
       sidebar.addEventListener('click', (e) => {
-        if (window.innerWidth <= 768 && e.target.closest('.album-nav-item')) closeSidebar(true);
+        if (window.innerWidth <= 768 && !isAlbumSelectMode && e.target.closest('.album-nav-item')) closeSidebar(true);
       });
 
       updatePinState();
     })();
-  
-// ===== FIX: BẬT CONTROLS CHO TẤT CẢ VIDEO =====
-document.addEventListener('play', function(e) {
-  if (e.target.tagName === 'VIDEO') {
-    e.target.setAttribute('controls', 'true');
-    e.target.setAttribute('playsinline', 'true');
-    e.target.setAttribute('webkit-playsinline', 'true');
-  }
-}, true);
-
-// ===== FIX: XÓA ĐÚNG ẢNH TRONG ALBUM HIỆN TẠI (KHÔNG XÓA NHẦM ALBUM KHÁC) =====
-window.deleteCurrentAlbumPhotos = async function() {
-  const currentAlbum = window.currentAlbumId || window.activeAlbumId || 'all';
-  if (currentAlbum === 'all') {
-    if (!confirm('Bạn có chắc chắn muốn xóa TẤT CẢ ảnh trong toàn bộ thư viện?')) return;
-    await window.clearAllMediaDatabase?.();
-  } else {
-    if (!confirm(`Bạn có chắc muốn xóa tất cả ảnh trong album này? Các album khác sẽ KHÔNG bị ảnh hưởng.`)) return;
-    if (typeof window.deleteMediaByAlbum === 'function') {
-      await window.deleteMediaByAlbum(currentAlbum);
-    } else {
-      // Logic trực tiếp trên IndexedDB
-      const req = indexedDB.open('MediaViewerDB');
-      req.onsuccess = function(e) {
-        const db = e.target.result;
-        const tx = db.transaction('media', 'readwrite');
-        const store = tx.objectStore('media');
-        const cursorReq = store.openCursor();
-        cursorReq.onsuccess = function(ev) {
-          const cursor = ev.target.result;
-          if (cursor) {
-            if (cursor.value.albumId === currentAlbum || cursor.value.album === currentAlbum) {
-              cursor.delete();
-            }
-            cursor.continue();
-          }
-        };
-        tx.oncomplete = () => location.reload();
-      };
-    }
-  }
-};
 
 </script>
 </body>
