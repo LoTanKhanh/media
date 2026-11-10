@@ -1232,7 +1232,76 @@
       }
     }
 
-  </style>
+  
+/* ===== FIX VIỀN ĐEN TRÊN DƯỚI ĐỀU 100% TRÊN IPHONE/IPAD ===== */
+.viewer-modal, #mediaViewerModal, #lightbox, .modal-backdrop {
+  height: 100vh !important;
+  height: 100dvh !important;
+  width: 100vw !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+  box-sizing: border-box !important;
+  position: fixed !important;
+  inset: 0 !important;
+  background: #000000 !important;
+  z-index: 10000 !important;
+}
+
+.viewer-media-container, #mediaContainer {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.viewer-media-container img, 
+.viewer-media-container video,
+#mediaContainer img, 
+#mediaContainer video {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  margin: auto !important;
+  display: block !important;
+}
+
+/* HIỂN THỊ ĐẦY ĐỦ THANH ĐIỀU KHIỂN & TIMELINE VIDEO */
+video::-webkit-media-controls-panel {
+  bottom: env(safe-area-inset-bottom, 15px) !important;
+}
+
+/* NÚT ĐÓNG VÀ HEADER DẠNG NỔI - KHÔNG ĐẨY ẢNH XUỐNG DƯỚI */
+.viewer-header, .modal-header, .viewer-close-btn {
+  position: absolute !important;
+  top: max(16px, env(safe-area-inset-top) + 8px) !important;
+  right: max(16px, env(safe-area-inset-right) + 8px) !important;
+  z-index: 10005 !important;
+}
+
+/* CHECKBOX CHỌN ALBUM */
+.album-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  accent-color: #ef4444;
+  cursor: pointer;
+}
+.album-manage-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+</style>
 </head>
 <body>
 
@@ -3468,6 +3537,49 @@
 
       updatePinState();
     })();
-  </script>
+  
+// ===== FIX: BẬT CONTROLS CHO TẤT CẢ VIDEO =====
+document.addEventListener('play', function(e) {
+  if (e.target.tagName === 'VIDEO') {
+    e.target.setAttribute('controls', 'true');
+    e.target.setAttribute('playsinline', 'true');
+    e.target.setAttribute('webkit-playsinline', 'true');
+  }
+}, true);
+
+// ===== FIX: XÓA ĐÚNG ẢNH TRONG ALBUM HIỆN TẠI (KHÔNG XÓA NHẦM ALBUM KHÁC) =====
+window.deleteCurrentAlbumPhotos = async function() {
+  const currentAlbum = window.currentAlbumId || window.activeAlbumId || 'all';
+  if (currentAlbum === 'all') {
+    if (!confirm('Bạn có chắc chắn muốn xóa TẤT CẢ ảnh trong toàn bộ thư viện?')) return;
+    await window.clearAllMediaDatabase?.();
+  } else {
+    if (!confirm(`Bạn có chắc muốn xóa tất cả ảnh trong album này? Các album khác sẽ KHÔNG bị ảnh hưởng.`)) return;
+    if (typeof window.deleteMediaByAlbum === 'function') {
+      await window.deleteMediaByAlbum(currentAlbum);
+    } else {
+      // Logic trực tiếp trên IndexedDB
+      const req = indexedDB.open('MediaViewerDB');
+      req.onsuccess = function(e) {
+        const db = e.target.result;
+        const tx = db.transaction('media', 'readwrite');
+        const store = tx.objectStore('media');
+        const cursorReq = store.openCursor();
+        cursorReq.onsuccess = function(ev) {
+          const cursor = ev.target.result;
+          if (cursor) {
+            if (cursor.value.albumId === currentAlbum || cursor.value.album === currentAlbum) {
+              cursor.delete();
+            }
+            cursor.continue();
+          }
+        };
+        tx.oncomplete = () => location.reload();
+      };
+    }
+  }
+};
+
+</script>
 </body>
 </html>
