@@ -2490,6 +2490,10 @@ body[data-view="gallery"] #gallery {
   padding-left: max(10px, env(safe-area-inset-left, 0px)) !important;
   padding-right: max(10px, env(safe-area-inset-right, 0px)) !important;
 }
+#album-sidebar.sidebar-overlay {
+  padding-top: calc(16px + env(safe-area-inset-top, 0px)) !important;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+}
 </style>
 </head>
 <body>
@@ -5695,6 +5699,10 @@ body[data-view="gallery"] #gallery {
 
         clearTimeout(hideTimer);
         hideTimer = null;
+
+        // Điện thoại/máy cảm ứng: thanh bên là lớp phủ trượt (cần class sidebar-overlay)
+        sidebar.classList.toggle('sidebar-overlay', !isDesktop());
+        if (isDesktop()) sidebar.classList.remove('show');
 
         if (isDesktop()) {
           sidebar.classList.remove('collapsed');
