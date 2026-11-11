@@ -1350,6 +1350,1685 @@ body.lb-open { overflow: hidden; }
 .link-bar-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .link-bar .btn { padding: 4px 10px; font-size: 12px; }
 .link-bar .btn:disabled { opacity: 0.45; pointer-events: none; }
+
+/* Chặn cuộn ngang thừa do tooltip ẩn (visibility:hidden vẫn chiếm chỗ).
+   Dùng clip thay hidden để không phá position:sticky của #main-header. */
+html { overflow-x: clip; }
+
+/* ===== BƯỚC 1: Nút chỉ-icon, Tooltip data-tip (~300ms), Thanh công cụ 1 hàng & Gộp #link-bar ===== */
+.btn-label {
+  display: none !important;
+}
+
+.icon-only-btn {
+  padding: 6px 8px;
+  min-width: 34px;
+  min-height: 34px;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.icon-only-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.icon-only-btn svg.dropdown-caret {
+  width: 11px;
+  height: 11px;
+  margin-left: -1px;
+  opacity: 0.85;
+}
+
+.sidebar-pin-btn.icon-only-btn {
+  padding: 5px 7px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.sidebar-close-btn.icon-only-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px;
+  position: relative;
+}
+
+/* Màn hình cảm ứng: giữ chữ ngắn cạnh icon cho các nút chính */
+@media (hover: none) {
+  .btn-label.touch-label {
+    display: inline !important;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+  .icon-only-btn {
+    padding: 6px 10px;
+  }
+}
+
+/* Tooltip [data-tip] chỉ áp dụng khi có hover, hiện sau 300ms, không tràn màn hình */
+@media (hover: hover) {
+  .btn[data-tip],
+  .icon-btn[data-tip],
+  .btn-icon-subtle[data-tip],
+  .sidebar-pin-btn[data-tip],
+  .sidebar-close-btn[data-tip],
+  #link-bar-text[data-tip] {
+    position: relative;
+  }
+
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(calc(-50% + var(--tip-dx, 0px))) translateY(4px);
+    background: rgba(20, 20, 25, 0.96);
+    color: #f4f4f5;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    max-width: min(280px, calc(100vw - 16px));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    z-index: 25000;
+    transition: opacity 0.15s ease 0s, transform 0.15s ease 0s, visibility 0s linear 0.15s;
+  }
+
+  header [data-tip]::after,
+  #toggle-header-btn[data-tip]::after,
+  .lightbox-header [data-tip]::after,
+  .album-sidebar [data-tip]::after,
+  [data-tip][data-tip-dir="down"]::after {
+    bottom: auto;
+    top: calc(100% + 8px);
+    transform: translateX(calc(-50% + var(--tip-dx, 0px))) translateY(-4px);
+  }
+
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(calc(-50% + var(--tip-dx, 0px))) translateY(0);
+    transition: opacity 0.15s ease 300ms, transform 0.15s ease 300ms, visibility 0s linear 300ms;
+  }
+
+  [data-tip=""]:hover::after {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Bố cục thanh công cụ gọn trên 1 hàng */
+#main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap !important;
+  height: var(--topbar-height) !important;
+  padding: 0 14px;
+  gap: 8px;
+}
+
+#main-header .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+#main-header .brand-logo,
+#main-header .brand-title {
+  display: none;
+}
+
+#main-header .controls-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap !important;
+  flex: 1;
+  min-width: 0;
+  width: auto !important;
+  gap: 8px;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+.toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.toolbar-filters {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toolbar-actions {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+#main-header .search-box {
+  width: 150px;
+  min-width: 72px;
+  flex: 0 1 160px;
+}
+
+#main-header .search-box:focus {
+  width: 190px;
+}
+
+#main-header select.select-box {
+  padding: 6px 8px;
+  max-width: 145px;
+  flex-shrink: 1;
+  min-width: 78px;
+  text-overflow: ellipsis;
+}
+
+/* Nhóm liên kết thư mục (#link-bar) gộp trong #main-header */
+#main-header #link-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px 3px 10px;
+  margin: 0;
+  border: 1px solid rgba(10, 132, 255, 0.32);
+  border-radius: 8px;
+  background: rgba(10, 132, 255, 0.1);
+  font-size: 12px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+#main-header #link-bar-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
+  color: var(--text-main);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+#main-header .link-bar-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+#main-header #link-bar .btn {
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+#main-header #link-bar .btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Menu gập "⋯" ở cửa sổ hẹp (< 900px) */
+.header-more-dropdown {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  #main-header {
+    padding: 0 10px;
+    gap: 6px;
+  }
+  #main-header .controls-group {
+    gap: 6px;
+  }
+  .toolbar-group {
+    gap: 5px;
+  }
+  #main-header .search-box {
+    width: 100px;
+    flex: 1 1 85px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  #main-header .search-box:focus {
+    width: 125px;
+  }
+  #main-header select.select-box {
+    padding: 5px 6px;
+    font-size: 12px;
+    max-width: 112px;
+    min-width: 70px;
+  }
+  #main-header .slider-container span {
+    display: none;
+  }
+  #main-header .slider-container input[type="range"] {
+    width: 52px;
+  }
+  #main-header #link-bar {
+    padding: 2px 5px 2px 8px;
+    gap: 4px;
+  }
+  #main-header #link-bar-text {
+    max-width: 105px;
+    font-size: 11px;
+  }
+  .header-collapsible {
+    display: none !important;
+  }
+  .header-more-dropdown {
+    display: inline-block !important;
+  }
+}
+
+/* ===== BƯỚC 2: Hàng tên album gọn 1 hàng, thanh trượt cỡ thumbnail & nút Xóa Album chỉ đỏ khi hover ===== */
+#album-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: nowrap;
+}
+
+#album-header-bar .album-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+#album-header-bar .album-title-group h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#album-header-bar .album-title-group h1 svg {
+  width: 19px !important;
+  height: 19px !important;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+#current-album-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#album-header-bar .album-meta-text {
+  display: inline-block;
+  margin-top: 0;
+  font-size: 13px;
+  color: var(--text-sub);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#album-header-bar .album-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.album-size-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  padding: 0 9px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--text-sub);
+}
+
+.album-size-control input[type="range"] {
+  width: 80px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.album-size-control .size-icon {
+  fill: currentColor;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.album-size-control .size-icon-sm {
+  width: 13px;
+  height: 13px;
+}
+
+.album-size-control .size-icon-lg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Nút Xóa Album: bình thường màu trung tính, chỉ đỏ khi rê chuột */
+#btn-delete-album {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-sub);
+}
+
+#btn-delete-album:hover,
+#btn-delete-album:focus-visible {
+  background-color: rgba(255, 69, 58, 0.22);
+  border-color: rgba(255, 69, 58, 0.5);
+  color: var(--danger-hover);
+}
+
+@media (max-width: 640px) {
+  #album-header-bar {
+    gap: 8px;
+  }
+  #album-header-bar .album-title-group h1 {
+    font-size: 15px;
+  }
+  #album-header-bar .album-meta-text {
+    font-size: 11px;
+  }
+  .album-size-control {
+    padding: 0 6px;
+    gap: 4px;
+  }
+  .album-size-control input[type="range"] {
+    width: 56px;
+  }
+}
+
+/* ===== BƯỚC 3: Thẻ ảnh kiểu lưới chỉ còn ảnh bo góc & tối ưu hiệu năng cuộn ===== */
+.image-card {
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
+}
+
+.image-card .thumb-wrapper {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: inherit;
+}
+
+.card-meta {
+  display: none !important;
+}
+
+/* ===== BƯỚC 4: Menu #batch-album-menu mở lên trên, cuộn dọc gọn trong viewport ===== */
+#batch-album-menu {
+  top: auto !important;
+  bottom: 100% !important;
+  margin-bottom: 8px;
+  left: 0;
+  right: auto;
+  max-height: 50vh;
+  max-width: min(260px, calc(100vw - 24px));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+#batch-album-menu .dropdown-item {
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#batch-album-menu .dropdown-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== BƯỚC 5: 3 Chế độ thanh bên desktop (pinned | auto | rail) ===== */
+:root {
+  --sidebar-width: 280px;
+  --rail-width: 64px;
+}
+
+/* Vùng cảm ứng mép trái ~12px trên desktop để hiện thanh bên ở chế độ auto */
+.sidebar-hover-strip {
+  display: none;
+}
+
+@media (min-width: 769px) and (hover: hover) {
+  body[data-sidebar-mode="auto"] .sidebar-hover-strip {
+    display: block;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 12px;
+    z-index: 995;
+    pointer-events: auto;
+  }
+
+  /* Khung kéo đổi chiều rộng mép phải thanh bên */
+  .sidebar-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: col-resize;
+    z-index: 1001;
+    background: transparent;
+    transition: background 0.15s ease;
+  }
+
+  .sidebar-resizer:hover,
+  body.sidebar-resizing .sidebar-resizer {
+    background: var(--accent);
+  }
+
+  body.sidebar-resizing {
+    cursor: col-resize !important;
+    user-select: none !important;
+  }
+
+  /* Chế độ 'pinned': luôn mở, dạt nội dung chính */
+  body[data-sidebar-mode="pinned"] #album-sidebar {
+    position: fixed !important;
+    top: var(--topbar-height) !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: calc(100vh - var(--topbar-height)) !important;
+    width: var(--sidebar-width) !important;
+    min-width: 200px !important;
+    max-width: 480px !important;
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    z-index: 95 !important;
+    box-shadow: none !important;
+    border-right: 1px solid var(--border-color) !important;
+  }
+
+  body[data-sidebar-mode="pinned"] .app-layout {
+    margin-left: var(--sidebar-width) !important;
+    transition: margin-left 0.15s ease;
+  }
+
+  body[data-sidebar-mode="pinned"] #sidebar-edge-tab {
+    display: none !important;
+  }
+
+  /* Chế độ 'auto': ẩn mặc định, hover mép trái hoặc tab thì trượt ra */
+  body[data-sidebar-mode="auto"] #album-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    width: var(--sidebar-width) !important;
+    min-width: 200px !important;
+    max-width: 480px !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 999 !important;
+  }
+
+  body[data-sidebar-mode="auto"] #album-sidebar.show {
+    transform: translateX(0) !important;
+  }
+
+  body[data-sidebar-mode="auto"] .app-layout {
+    margin-left: 0 !important;
+  }
+
+  body[data-sidebar-mode="auto"] .sidebar-resizer {
+    display: none !important;
+  }
+
+  /* Chế độ 'rail': dải hẹp 64px, không có chữ nhìn thấy */
+  body[data-sidebar-mode="rail"] #album-sidebar {
+    position: fixed !important;
+    top: var(--topbar-height) !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: calc(100vh - var(--topbar-height)) !important;
+    width: var(--rail-width) !important;
+    min-width: var(--rail-width) !important;
+    max-width: var(--rail-width) !important;
+    padding: 10px 6px !important;
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    z-index: 95 !important;
+    box-shadow: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  body[data-sidebar-mode="rail"] .app-layout {
+    margin-left: var(--rail-width) !important;
+  }
+
+  body[data-sidebar-mode="rail"] #album-sidebar .sidebar-section,
+  body[data-sidebar-mode="rail"] #album-sidebar .sidebar-resizer,
+  body[data-sidebar-mode="rail"] #sidebar-edge-tab {
+    display: none !important;
+  }
+
+  /* Dải rail chứa các ô icon vuông bo góc */
+  .rail-mode-wrap {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  body[data-sidebar-mode="rail"] .rail-mode-wrap {
+    display: flex;
+  }
+
+  .rail-item {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-sub);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    user-select: none;
+    position: relative;
+    padding: 0;
+  }
+
+  .rail-item svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    pointer-events: none;
+  }
+
+  .rail-item:hover {
+    background: var(--card-hover);
+    color: var(--text-main);
+    border-color: #3f3f46;
+  }
+
+  .rail-item.active {
+    background: rgba(10, 132, 255, 0.18);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .rail-item.active svg {
+    fill: var(--accent);
+  }
+
+  .rail-item.drag-target-hover {
+    background: rgba(10, 132, 255, 0.35) !important;
+    outline: 2px dashed var(--accent) !important;
+    color: #fff !important;
+  }
+}
+
+/* ===== BƯỚC 6: Ảnh bìa (sticker) cho Album ===== */
+.album-cover-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+}
+
+.rail-item.has-cover {
+  padding: 0;
+  overflow: hidden;
+}
+
+.rail-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+/* ===== BƯỚC 7: Kéo chuột trong trình xem ảnh (Drag Switch & Close) ===== */
+.lightbox-body {
+  cursor: grab;
+}
+
+.lightbox-body.mouse-dragging,
+.lightbox-body.panning:active {
+  cursor: grabbing !important;
+}
+
+.lightbox-media-container.snap-back {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+}
+
+/* ===== BƯỚC 8: Xem trước ảnh khi rê chuột (Hover Preview) ===== */
+#hover-preview-toggle {
+  color: var(--text-sub);
+}
+
+#hover-preview-toggle.active {
+  color: var(--accent);
+  background-color: rgba(10, 132, 255, 0.15);
+  border-color: rgba(10, 132, 255, 0.4);
+}
+
+@media (hover: none) {
+  #hover-preview-toggle {
+    display: none !important;
+  }
+}
+
+.hover-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 28000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.hover-preview-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hover-preview-box {
+  position: relative;
+  max-width: 92vw;
+  max-height: 92vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #111114;
+}
+
+.hover-preview-box img {
+  max-width: 92vw;
+  max-height: 92vh;
+  object-fit: contain;
+  display: block;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.hover-preview-box img.loaded {
+  opacity: 1;
+}
+
+.hover-preview-spinner {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: hpSpin 0.7s linear infinite;
+  display: none;
+}
+
+.hover-preview-box.loading .hover-preview-spinner {
+  display: block;
+}
+
+@keyframes hpSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== BƯỚC 9: Ba kiểu xem (Grid, List, Gallery) ===== */
+.view-mode-group {
+  display: inline-flex;
+  align-items: center;
+  background-color: #1f1f23;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.view-mode-group .btn {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-sub);
+}
+
+.view-mode-group .btn:hover {
+  color: var(--text-main);
+  background-color: var(--card-hover);
+}
+
+.view-mode-group .btn.active {
+  background-color: var(--card-bg);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Kiểu lưới (Grid View) */
+body[data-view="grid"] #gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--thumb-size, 200px), 1fr));
+  gap: 16px;
+}
+
+/* Kiểu danh sách (List View) */
+body[data-view="list"] #gallery {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.list-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.list-table thead {
+  /* Với border-collapse: collapse, sticky đặt trên <thead> làm hàng đầu của
+     tbody lọt lên trên tiêu đề. Đặt sticky trên từng ô <th> mới đúng. */
+  background: #141417;
+  user-select: none;
+}
+
+.list-table th {
+  padding: 10px 12px;
+  font-weight: 600;
+  color: var(--text-sub);
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  /* #gallery có overflow:hidden nên nó là mốc của sticky, không phải khung nhìn.
+     Dùng top:0, nếu đặt theo chiều cao thanh công cụ thì tiêu đề bị đẩy xuống
+     58px và che mất hàng đầu tiên. */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #141417;
+  box-shadow: inset 0 -1px 0 var(--border-color);
+}
+
+.list-table th.sortable {
+  cursor: pointer;
+}
+
+.list-table th.sortable:hover {
+  color: var(--text-main);
+}
+
+.list-row {
+  height: 56px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+  transition: background-color 0.12s ease;
+}
+
+.list-row:hover {
+  background-color: var(--card-hover);
+}
+
+.list-row.selected {
+  background-color: rgba(10, 132, 255, 0.14) !important;
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.list-row td {
+  padding: 6px 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.list-check-cell {
+  width: 40px;
+  text-align: center;
+}
+
+.list-check-box {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.list-thumb-cell {
+  width: 56px;
+  padding-left: 0;
+}
+
+.list-thumb-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111114;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.list-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.list-thumb-wrap svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--text-sub);
+}
+
+.list-name-cell {
+  font-weight: 500;
+  color: var(--text-main);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Kiểu thư viện (Gallery View) */
+body[data-view="gallery"] #gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: calc(100vh - var(--topbar-height) - 100px);
+}
+
+.gallery-stage {
+  flex: 1;
+  min-height: 52vh;
+  max-height: 68vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.gallery-stage img,
+.gallery-stage video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.gallery-stage-ph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-sub);
+}
+
+.gallery-stage-ph svg {
+  width: 54px;
+  height: 54px;
+  fill: currentColor;
+}
+
+.gallery-stage-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gallery-stage-badge svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.gallery-filmstrip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filmstrip-thumb {
+  width: 82px;
+  height: 82px;
+  min-width: 82px;
+  border-radius: 10px;
+  background: #18181b;
+  border: 2px solid transparent;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.filmstrip-thumb:hover {
+  transform: translateY(-2px);
+  border-color: #3f3f46;
+}
+
+.filmstrip-thumb.active {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 12px rgba(10, 132, 255, 0.45);
+}
+
+.filmstrip-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.filmstrip-thumb .video-badge {
+  top: 4px;
+  right: 4px;
+  padding: 1px 4px;
+  font-size: 9px;
+}
+
+/* ===== BƯỚC 10-a: Play Media tabs & Playlist Add Menu ===== */
+.sidebar-app-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 12px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 8px;
+}
+
+.sidebar-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-sub);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sidebar-tab-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.sidebar-tab-btn:hover {
+  background: var(--card-hover);
+  color: var(--text-main);
+}
+
+.sidebar-tab-btn.active {
+  background: rgba(10, 132, 255, 0.16);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.sidebar-tab-btn.active svg {
+  fill: var(--accent);
+}
+
+#btn-play-media-tab {
+  color: #60a5fa;
+}
+
+.rail-playmedia-btn {
+  background: rgba(10, 132, 255, 0.14) !important;
+  color: var(--accent) !important;
+  border-color: rgba(10, 132, 255, 0.4) !important;
+}
+
+.rail-playmedia-btn:hover {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+body[data-sidebar-mode="rail"] .sidebar-app-tabs {
+  display: none !important;
+}
+
+.upward-menu {
+  top: auto !important;
+  bottom: 100% !important;
+  margin-bottom: 8px;
+  left: 0;
+  right: auto;
+  max-height: 50vh;
+  max-width: min(280px, calc(100vw - 24px));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.playmedia-view-container {
+  flex: 1;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+body[data-app-mode="playmedia"] .album-header-bar,
+body[data-app-mode="playmedia"] #gallery,
+body[data-app-mode="playmedia"] #empty-state,
+body[data-app-mode="playmedia"] #link-bar,
+body[data-app-mode="playmedia"] #trash-bar,
+body[data-app-mode="playmedia"] #batch-action-bar {
+  display: none !important;
+}
+
+body[data-app-mode="playmedia"] #playmedia-view {
+  display: flex !important;
+}
+
+/* ===== BƯỚC 10-b: Giao diện Rạp hát Play Media & Hàng đợi Queue ===== */
+.playmedia-view-container {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - var(--topbar-height));
+  background: #09090b;
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+.pm-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Cột danh sách playlist (bên trái) */
+.pm-playlist-panel {
+  width: 240px;
+  min-width: 240px;
+  background: #111115;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+.pm-panel-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-sub);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pm-playlist-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pm-playlist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-sub);
+  transition: all 0.15s ease;
+  gap: 6px;
+}
+
+.pm-playlist-item:hover {
+  background: var(--card-hover);
+  color: #fff;
+}
+
+.pm-playlist-item.active {
+  background: rgba(10, 132, 255, 0.16);
+  color: #fff;
+  font-weight: 600;
+}
+
+.pm-pl-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pm-pl-left svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.pm-pl-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-pl-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.pm-playlist-item:hover .pm-pl-actions {
+  opacity: 1;
+}
+
+.pm-pl-act-btn {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: inline-flex;
+}
+
+.pm-pl-act-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.pm-pl-act-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* Khu vực sân khấu phát chính ở giữa */
+.pm-stage-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pm-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.pm-stage-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-sub);
+  text-align: center;
+  padding: 24px;
+}
+
+.pm-stage-empty svg {
+  width: 64px;
+  height: 64px;
+  fill: rgba(255, 255, 255, 0.2);
+}
+
+.pm-stage img,
+.pm-stage video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Thanh điều khiển nổi phía dưới (tự ẩn sau 1500ms) */
+.pm-controls-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  width: min(720px, calc(100% - 32px));
+  background: rgba(20, 20, 24, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  z-index: 100;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  user-select: none;
+}
+
+.pm-controls-bar.ui-hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(15px);
+  pointer-events: none;
+}
+
+.pm-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pm-progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.pm-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.pm-time-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-sub);
+  font-family: monospace;
+}
+
+.pm-track-title {
+  color: #fff;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-buttons-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pm-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-play-btn {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 50% !important;
+}
+
+.pm-play-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Hàng đợi (Queue) bên phải */
+.pm-queue-panel {
+  width: 280px;
+  min-width: 280px;
+  background: #111115;
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  transition: transform 0.25s ease, width 0.25s ease;
+}
+
+.pm-queue-panel.collapsed {
+  display: none !important;
+}
+
+.pm-queue-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pm-queue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  font-size: 12px;
+  gap: 8px;
+  transition: background-color 0.12s ease;
+}
+
+.pm-queue-item:hover {
+  background: var(--card-hover);
+}
+
+.pm-queue-item.active {
+  border-color: var(--accent);
+  background: rgba(10, 132, 255, 0.15);
+}
+
+.pm-queue-item.missing {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.pm-queue-item.dragging {
+  opacity: 0.3;
+}
+
+.pm-qi-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pm-qi-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #1a1a1f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pm-qi-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pm-qi-thumb svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--text-sub);
+}
+
+.pm-qi-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.pm-qi-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.pm-qi-meta {
+  font-size: 10px;
+  color: var(--text-sub);
+}
+
+.pm-qi-remove {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+}
+
+.pm-qi-remove:hover {
+  color: var(--danger);
+  background: rgba(255, 69, 58, 0.15);
+}
+
+.pm-qi-remove svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* Hộp thoại chọn file từ Thư viện vào queue */
+.pm-picker-box {
+  width: min(680px, 95vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.pm-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.pm-picker-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pm-picker-grid {
+  flex: 1;
+  min-height: 280px;
+  max-height: 48vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  padding: 4px;
+  background: #111114;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.pm-pick-card {
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  background: #1a1a20;
+}
+
+.pm-pick-card.selected {
+  border-color: var(--accent);
+}
+
+.pm-pick-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pm-pick-card .pm-pick-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.pm-pick-card.selected .pm-pick-badge {
+  display: flex;
+}
+
+/* Đáp ứng trên thiết bị cảm ứng và màn hình hẹp */
+@media (max-width: 768px) {
+  .pm-layout {
+    flex-direction: column;
+  }
+  .pm-playlist-panel {
+    display: none;
+  }
+  .pm-queue-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 45vh;
+    width: 100% !important;
+    min-width: 0 !important;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.7);
+    z-index: 150;
+  }
+  .pm-controls-bar {
+    width: calc(100% - 16px);
+    bottom: 8px;
+    padding: 8px 12px;
+  }
+}
 </style>
 </head>
 <body>
@@ -1361,16 +3040,18 @@ body.lb-open { overflow: hidden; }
 
   <!-- Gallery Top Toolbar -->
   <header id="main-header">
-    <div class="brand" style="display:flex;align-items:center;gap:10px;">
-      <button id="btn-toggle-sidebar" class="btn" style="padding:5px 8px;" title="Ẩn/Hiện danh sách Album (B)">
+    <div class="brand toolbar-group toolbar-nav">
+      <button id="btn-toggle-sidebar" class="btn icon-only-btn" data-tip="Ẩn/Hiện danh sách Album (B)" title="Ẩn/Hiện danh sách Album (B)" aria-label="Ẩn/Hiện danh sách Album (B)">
         <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        <span class="btn-label">Ẩn/Hiện danh sách Album (B)</span>
       </button>
-      <svg style="width:20px;height:20px;fill:var(--accent);" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-      <span>Mac Media Viewer</span>
+      <svg class="brand-logo" style="width:20px;height:20px;fill:var(--accent);" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+      <span class="brand-title">Mac Media Viewer</span>
     </div>
 
     <div class="controls-group">
-      <input type="text" id="search-input" class="search-box" placeholder="Tìm tên..." />
+      <div class="toolbar-group toolbar-filters">
+      <input type="text" id="search-input" class="search-box" placeholder="Tìm tên..." aria-label="Tìm tên" />
 
       <select id="type-filter" class="select-box">
         <option value="all">Tất cả file</option>
@@ -1383,20 +3064,57 @@ body.lb-open { overflow: hidden; }
         <option value="name-desc">Tên (Z → A)</option>
         <option value="date-desc">Mới nhất trước</option>
         <option value="date-asc">Cũ nhất trước</option>
-        <option value="size-desc">Dung lượng lớn nhất</option>
+        <option value="size-desc">Dung lượng giảm dần</option>
+        <option value="size-asc">Dung lượng tăng dần</option>
+        <option value="type-asc">Loại file (A → Z)</option>
+        <option value="type-desc">Loại file (Z → A)</option>
       </select>
 
-      <div class="slider-container" title="Kích thước thumbnail">
-        <span>Cỡ:</span>
-        <input type="range" id="size-slider" min="140" max="340" value="200" />
+      <div class="view-mode-group">
+        <button id="view-btn-grid" class="btn icon-only-btn active" data-tip="Kiểu lưới (Grid)" title="Kiểu lưới (Grid)" aria-label="Kiểu lưới (Grid)">
+          <svg viewBox="0 0 24 24"><path d="M4 11h5V5H4v6zm0 7h5v-6H4v6zm6 0h5v-6h-5v6zm6 0h5v-6h-5v6zm-6-7h5V5h-5v6zm6-6v6h5V5h-5z"/></svg>
+          <span class="btn-label">Lưới</span>
+        </button>
+        <button id="view-btn-list" class="btn icon-only-btn" data-tip="Kiểu danh sách (List)" title="Kiểu danh sách (List)" aria-label="Kiểu danh sách (List)">
+          <svg viewBox="0 0 24 24"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
+          <span class="btn-label">Danh sách</span>
+        </button>
+        <button id="view-btn-gallery" class="btn icon-only-btn" data-tip="Kiểu thư viện (Gallery)" title="Kiểu thư viện (Gallery)" aria-label="Kiểu thư viện (Gallery)">
+          <svg viewBox="0 0 24 24"><path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/></svg>
+          <span class="btn-label">Thư viện</span>
+        </button>
+      </div>
       </div>
 
+      <div id="link-bar" class="link-bar toolbar-group" style="display:none;">
+        <span id="link-bar-text"></span>
+        <span class="link-bar-actions">
+          <button id="link-btn-connect" class="btn btn-primary icon-only-btn" style="display:none;" data-tip="Kết nối lại" title="Kết nối lại" aria-label="Kết nối lại">
+            <svg viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/></svg>
+            <span class="btn-label">Kết nối lại</span>
+          </button>
+          <button id="link-btn-rescan" class="btn icon-only-btn" data-tip="Quét lại" title="Quét lại" aria-label="Quét lại">
+            <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            <span class="btn-label">Quét lại</span>
+          </button>
+          <button id="link-btn-restore" class="btn icon-only-btn" style="display:none;" data-tip="Hiện lại file đã ẩn" title="Hiện lại file đã ẩn" aria-label="Hiện lại file đã ẩn">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <span class="btn-label">Hiện lại file đã ẩn</span>
+          </button>
+          <button id="link-btn-unlink" class="btn btn-danger icon-only-btn" data-tip="Gỡ liên kết" title="Gỡ liên kết" aria-label="Gỡ liên kết">
+            <svg viewBox="0 0 24 24"><path d="M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16v-2zM2 4.27l3.11 3.11C3.29 8.12 2 9.91 2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z"/></svg>
+            <span class="btn-label">Gỡ liên kết</span>
+          </button>
+        </span>
+      </div>
+
+      <div class="toolbar-group toolbar-actions">
       <!-- Dropdown Mở Media -->
-      <div class="dropdown">
-        <button id="open-dropdown-btn" class="btn btn-primary" title="Mở ảnh hoặc video">
+      <div class="dropdown" id="open-dropdown-wrap">
+        <button id="open-dropdown-btn" class="btn btn-primary icon-only-btn" data-tip="Mở ảnh hoặc video" title="Mở ảnh hoặc video" aria-label="Mở ảnh hoặc video">
           <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-          <span>Mở Media</span>
-          <svg style="width:12px;height:12px;fill:currentColor;margin-left:2px;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+          <span class="btn-label touch-label">Mở Media</span>
+          <svg class="dropdown-caret" style="width:11px;height:11px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
         </button>
         <div id="open-dropdown-menu" class="dropdown-menu">
           <div class="dropdown-item" id="menu-select-folder">
@@ -1414,43 +3132,86 @@ body.lb-open { overflow: hidden; }
         </div>
       </div>
 
+      <!-- Công tắc xem trước ảnh khi rê chuột -->
+      <button id="hover-preview-toggle" class="btn icon-only-btn active" data-tip="Xem trước khi rê chuột: Bật" title="Xem trước khi rê chuột: Bật" aria-label="Xem trước khi rê chuột: Bật">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+        <span class="btn-label">Xem trước khi rê chuột</span>
+      </button>
+
       <!-- Dedicated Clear All Button -->
-      <button id="btn-clear-all" class="btn btn-danger" title="Xóa toàn bộ ảnh/video đang lưu">
-        <svg style="width:15px;height:15px;fill:currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        <span>Xóa tất cả</span>
+      <button id="btn-clear-all" class="btn btn-danger icon-only-btn" data-tip="Xóa tất cả" title="Xóa toàn bộ ảnh/video đang lưu" aria-label="Xóa tất cả">
+        <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        <span class="btn-label touch-label">Xóa tất cả</span>
       </button>
 
-      <button id="btn-fullscreen-main" class="btn" title="Toàn màn hình (F)">
-        <svg style="width:15px;height:15px;fill:currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-        <span>Toàn Màn Hình</span>
+      <button id="btn-fullscreen-main" class="btn icon-only-btn header-collapsible" data-tip="Toàn màn hình (F)" title="Toàn màn hình (F)" aria-label="Toàn màn hình (F)">
+        <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        <span class="btn-label">Toàn Màn Hình</span>
       </button>
 
-      <button id="hide-header-btn" class="btn" title="Ẩn thanh công cụ này (T)">
-        <svg style="width:14px;height:14px;fill:currentColor" viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
-        <span>Ẩn thanh</span>
+      <button id="hide-header-btn" class="btn icon-only-btn header-collapsible" data-tip="Ẩn thanh công cụ này (T)" title="Ẩn thanh công cụ này (T)" aria-label="Ẩn thanh công cụ này (T)">
+        <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+        <span class="btn-label">Ẩn thanh</span>
       </button>
+
+      <div class="dropdown header-more-dropdown" id="header-more-dropdown">
+        <button id="header-more-btn" class="btn icon-only-btn" data-tip="Thêm công cụ" title="Thêm công cụ" aria-label="Thêm công cụ">
+          <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+          <span class="btn-label">Thêm công cụ</span>
+        </button>
+        <div id="header-more-menu" class="dropdown-menu">
+          <div class="dropdown-item" id="more-item-fullscreen">
+            <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            <span>Toàn màn hình (F)</span>
+          </div>
+          <div class="dropdown-item" id="more-item-hide-header">
+            <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+            <span>Ẩn thanh công cụ (T)</span>
+          </div>
+        </div>
+      </div>
+      </div>
 
       <input type="file" id="dir-input" webkitdirectory directory multiple style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;opacity:0.01;" />
       <input type="file" id="file-input" multiple accept="image/*,video/*,.heic,.heif,.3gp,.mkv,.avi,.ts" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;opacity:0.01;" />
     </div>
   </header>
 
-  <button id="toggle-header-btn" class="btn btn-primary" title="Hiện lại thanh công cụ">
+  <button id="toggle-header-btn" class="btn btn-primary icon-only-btn" data-tip="Hiện lại thanh công cụ" title="Hiện lại thanh công cụ" aria-label="Hiện lại thanh công cụ">
     <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
-    <span>Hiện công cụ</span>
+    <span class="btn-label">Hiện công cụ</span>
   </button>
 
     <div class="app-layout">
     <!-- Album Sidebar -->
     <aside id="album-sidebar" class="album-sidebar">
+      <div class="sidebar-app-tabs">
+        <button id="btn-play-media-tab" class="sidebar-tab-btn" data-tip="Mở Play Media" title="Mở Play Media" aria-label="Mở Play Media">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span class="tab-text">Play Media</span>
+        </button>
+        <button id="btn-library-tab" class="sidebar-tab-btn active" data-tip="Về Thư viện" title="Về Thư viện" aria-label="Về Thư viện">
+          <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+          <span class="tab-text">Thư viện</span>
+        </button>
+      </div>
+      <div id="rail-mode-wrap" class="rail-mode-wrap"></div>
       <div class="sidebar-section">
         <div class="sidebar-section-header">
           <span>Thư viện</span>
           <div style="display:flex;gap:6px;align-items:center;">
-            <button id="btn-pin-sidebar" title="Ghim thanh bên" class="sidebar-pin-btn">
-              <span aria-hidden="true">📌</span><span class="pin-text">Ghim</span>
+            <button id="sidebar-mode-btn" class="icon-only-btn sidebar-mode-toggle" data-tip="Chế độ: Đã ghim (Bấm để chuyển)" title="Chế độ: Đã ghim (Bấm để chuyển)" aria-label="Chế độ: Đã ghim (Bấm để chuyển)">
+              <svg viewBox="0 0 24 24"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
+              <span class="btn-label">Chế độ thanh bên</span>
             </button>
-            <button id="btn-close-sidebar" class="sidebar-close-btn" title="Đóng thanh bên">✕</button>
+            <button id="btn-pin-sidebar" data-tip="Ghim thanh bên" title="Ghim thanh bên" aria-label="Ghim thanh bên" class="sidebar-pin-btn icon-only-btn" style="display:none;">
+              <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
+              <span class="pin-text btn-label">Ghim</span>
+            </button>
+            <button id="btn-close-sidebar" class="sidebar-close-btn icon-only-btn" data-tip="Đóng thanh bên" title="Đóng thanh bên" aria-label="Đóng thanh bên">
+              <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              <span class="btn-label">Đóng thanh bên</span>
+            </button>
           </div>
         </div>
         <div class="album-nav-item active" id="album-nav-all" data-album-id="all">
@@ -1480,17 +3241,28 @@ body.lb-open { overflow: hidden; }
       <div class="sidebar-section">
         <div class="sidebar-section-header">
           <span>Album của bạn</span>
-          <div style="display:flex;gap:4px;align-items:center;"><button id="btn-select-albums" class="btn-icon-subtle" title="Chọn nhiều album để xóa">
+          <div style="display:flex;gap:4px;align-items:center;"><button id="btn-select-albums" class="btn-icon-subtle" data-tip="Chọn nhiều album để xóa" title="Chọn nhiều album để xóa" aria-label="Chọn nhiều album để xóa">
               <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              <span class="btn-label">Chọn nhiều album để xóa</span>
             </button>
-            <button id="btn-create-album" class="btn-icon-subtle" title="Tạo Album mới">
+            <button id="btn-create-album" class="btn-icon-subtle" data-tip="Tạo Album mới" title="Tạo Album mới" aria-label="Tạo Album mới">
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span class="btn-label">Tạo Album mới</span>
           </button></div>
         </div>
         <div id="album-manage-bar" class="album-manage-bar" style="display:none;">
-          <button id="btn-album-select-all" class="btn">Chọn hết</button>
-          <button id="btn-album-delete-selected" class="btn btn-danger"><span>Xóa (0)</span></button>
-          <button id="btn-album-select-cancel" class="btn">Hủy</button>
+          <button id="btn-album-select-all" class="btn icon-only-btn" data-tip="Chọn tất cả album" title="Chọn tất cả album" aria-label="Chọn tất cả album">
+            <svg viewBox="0 0 24 24"><path d="M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2zM7 17h10V7H7v10zm2-8h6v6H9V9z"/></svg>
+            <span class="btn-label">Chọn hết</span>
+          </button>
+          <button id="btn-album-delete-selected" class="btn btn-danger icon-only-btn" data-tip="Xóa (0)" title="Xóa album đã chọn" aria-label="Xóa (0)">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span class="btn-label touch-label">Xóa (0)</span>
+          </button>
+          <button id="btn-album-select-cancel" class="btn icon-only-btn" data-tip="Hủy chọn album" title="Hủy chọn album" aria-label="Hủy chọn album">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            <span class="btn-label">Hủy</span>
+          </button>
         </div>
         <div id="custom-albums-list" style="display:flex;flex-direction:column;gap:3px;">
           <!-- Custom albums rendered by JS -->
@@ -1500,20 +3272,14 @@ body.lb-open { overflow: hidden; }
 
     <!-- Main Content Area -->
     <main class="content-area">
-      <div id="link-bar" class="link-bar" style="display:none;">
-        <span id="link-bar-text"></span>
-        <span class="link-bar-actions">
-          <button id="link-btn-connect" class="btn btn-primary" style="display:none;">🔓 Kết nối lại</button>
-          <button id="link-btn-rescan" class="btn">🔄 Quét lại</button>
-          <button id="link-btn-restore" class="btn" style="display:none;"></button>
-          <button id="link-btn-unlink" class="btn btn-danger">Gỡ liên kết</button>
-        </span>
-      </div>
-
+      <div id="playmedia-view" class="playmedia-view-container" style="display:none;"></div>
       <div id="trash-bar" class="link-bar" style="display:none; background: rgba(255, 69, 58, 0.08);">
         <span id="trash-bar-text"></span>
         <span class="link-bar-actions">
-          <button id="trash-btn-restore-all" class="btn btn-primary">♻ Khôi phục tất cả</button>
+          <button id="trash-btn-restore-all" class="btn btn-primary icon-only-btn" data-tip="Khôi phục tất cả" title="Khôi phục tất cả" aria-label="Khôi phục tất cả">
+            <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/></svg>
+            <span class="btn-label touch-label">Khôi phục tất cả</span>
+          </button>
         </span>
       </div>
 
@@ -1527,26 +3293,34 @@ body.lb-open { overflow: hidden; }
           <span id="current-album-meta" class="album-meta-text">0 file</span>
         </div>
         <div class="album-actions-group">
-          <!-- Nút Phát tất cả trong album -->
-          <button id="btn-play-all" class="btn btn-primary" title="Phát tất cả file trong album này">
-            <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            <span>Phát tất cả</span>
-          </button>
+          <div class="slider-container album-size-control" data-tip="Kích thước thumbnail" title="Kích thước thumbnail" aria-label="Kích thước thumbnail">
+            <svg class="size-icon size-icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            <input type="range" id="size-slider" min="140" max="340" value="200" aria-label="Kích thước thumbnail" />
+            <svg class="size-icon size-icon-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+          </div>
 
           <!-- Nút chọn nhiều -->
-          <button id="btn-toggle-select" class="btn" title="Chọn nhiều file để phát hoặc quản lý">
+          <button id="btn-toggle-select" class="btn icon-only-btn" data-tip="Chọn nhiều file để phát hoặc quản lý" title="Chọn nhiều file để phát hoặc quản lý" aria-label="Chọn nhiều file để phát hoặc quản lý">
             <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            <span>Chọn nhiều</span>
+            <span class="btn-label touch-label">Chọn nhiều</span>
           </button>
 
-          <!-- Nút đổi tên & xóa album -->
-          <button id="btn-rename-album" class="btn" style="display:none;" title="Đổi tên album">
-            <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-            <span>Đổi tên</span>
+          <!-- Nút đổi tên, bỏ ảnh bìa & xóa album -->
+          <button id="btn-remove-cover" class="btn icon-only-btn" style="display:none;" data-tip="Bỏ ảnh bìa tùy chọn" title="Bỏ ảnh bìa tùy chọn" aria-label="Bỏ ảnh bìa tùy chọn">
+            <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5zM12 2l4 4-1.41 1.41L13 5.83V11h-2V5.83l-1.59 1.58L8 6l4-4z"/></svg>
+            <span class="btn-label">Bỏ ảnh bìa</span>
           </button>
-          <button id="btn-delete-album" class="btn btn-danger" style="display:none;" title="Xóa album này (file sẽ chuyển về Chưa phân loại)">
-            <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-            <span>Xóa Album</span>
+          <button id="btn-rename-album" class="btn icon-only-btn" style="display:none;" data-tip="Đổi tên album" title="Đổi tên album" aria-label="Đổi tên album">
+            <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <span class="btn-label">Đổi tên</span>
+          </button>
+          <button id="btn-album-add-playlist" class="btn icon-only-btn" data-tip="Thêm cả album vào playlist" title="Thêm cả album vào playlist" aria-label="Thêm cả album vào playlist">
+            <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+            <span class="btn-label">Thêm album vào playlist</span>
+          </button>
+          <button id="btn-delete-album" class="btn btn-danger icon-only-btn" style="display:none;" data-tip="Xóa album này (file sẽ chuyển về Chưa phân loại)" title="Xóa album này (file sẽ chuyển về Chưa phân loại)" aria-label="Xóa album này (file sẽ chuyển về Chưa phân loại)">
+            <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span class="btn-label touch-label">Xóa Album</span>
           </button>
         </div>
       </div>
@@ -1557,12 +3331,13 @@ body.lb-open { overflow: hidden; }
         <p id="empty-state-desc">Bấm chọn thư mục hoặc file để bắt đầu xem. Các file sẽ được <b>tự động ghi nhớ trên trình duyệt</b>, lần sau mở lại web sẽ tự hiện lên ngay!</p>
         
         <div class="folder-buttons" id="empty-folder-buttons">
-          <button class="btn btn-primary" id="btn-empty-folder">
+          <button class="btn btn-primary icon-only-btn" id="btn-empty-folder" data-tip="Chọn Cả Folder" title="Chọn Cả Folder" aria-label="Chọn Cả Folder">
             <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-            <span>Chọn Cả Folder</span>
+            <span class="btn-label touch-label">Chọn Cả Folder</span>
           </button>
-          <button class="btn" id="btn-empty-files">
-            <span>Chọn File Cụ Thể</span>
+          <button class="btn icon-only-btn" id="btn-empty-files" data-tip="Chọn File Cụ Thể" title="Chọn File Cụ Thể" aria-label="Chọn File Cụ Thể">
+            <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z"/></svg>
+            <span class="btn-label touch-label">Chọn File Cụ Thể</span>
           </button>
         </div>
       </div>
@@ -1578,31 +3353,47 @@ body.lb-open { overflow: hidden; }
       <span id="batch-text">Đã chọn 0 file</span>
     </div>
     <div class="batch-actions">
-      <!-- Nút phát các file đã chọn -->
-      <button id="btn-batch-play" class="btn btn-primary" title="Phát các file đang chọn">
+      <button id="btn-batch-play" class="btn btn-primary icon-only-btn" style="display:none;" data-tip="Phát các file đang chọn" title="Phát các file đang chọn" aria-label="Phát các file đang chọn">
         <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <span>Phát các file đã chọn</span>
+        <span class="btn-label touch-label">Phát các file đã chọn</span>
       </button>
 
+      <button id="btn-set-cover" class="btn icon-only-btn" style="display:none;" data-tip="Đặt làm ảnh bìa album" title="Đặt làm ảnh bìa album" aria-label="Đặt làm ảnh bìa album">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span class="btn-label touch-label">Đặt làm ảnh bìa</span>
+      </button>
+
+      <div class="dropdown" id="batch-playlist-dropdown">
+        <button id="btn-batch-playlist" class="btn icon-only-btn" data-tip="Thêm vào playlist" title="Thêm vào playlist" aria-label="Thêm vào playlist">
+          <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+          <span class="btn-label touch-label">Thêm vào playlist ▾</span>
+          <svg class="dropdown-caret" style="width:11px;height:11px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <div id="batch-playlist-menu" class="dropdown-menu upward-menu" style="min-width:210px;"></div>
+      </div>
+
       <div class="dropdown" id="batch-album-dropdown">
-        <button id="btn-batch-album" class="btn" title="Chuyển các file đã chọn vào album">
+        <button id="btn-batch-album" class="btn icon-only-btn" data-tip="Chuyển các file đã chọn vào album" title="Chuyển các file đã chọn vào album" aria-label="Chuyển các file đã chọn vào album">
           <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-          <span>Chuyển vào Album ▾</span>
+          <span class="btn-label touch-label">Chuyển vào Album ▾</span>
+          <svg class="dropdown-caret" style="width:11px;height:11px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
         </button>
         <div id="batch-album-menu" class="dropdown-menu" style="min-width:200px;"></div>
       </div>
 
-      <button id="btn-batch-restore" class="btn btn-primary" style="display:none;" title="Khôi phục về thư mục cũ">
-        <span>♻ Khôi phục</span>
+      <button id="btn-batch-restore" class="btn btn-primary icon-only-btn" style="display:none;" data-tip="Khôi phục về thư mục cũ" title="Khôi phục về thư mục cũ" aria-label="Khôi phục về thư mục cũ">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/></svg>
+        <span class="btn-label touch-label">Khôi phục</span>
       </button>
 
-      <button id="btn-batch-delete" class="btn btn-danger" title="Xóa các file đang chọn">
+      <button id="btn-batch-delete" class="btn btn-danger icon-only-btn" data-tip="Xóa đã chọn" title="Xóa các file đang chọn" aria-label="Xóa đã chọn">
         <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        <span>Xóa đã chọn</span>
+        <span class="btn-label touch-label">Xóa đã chọn</span>
       </button>
 
-      <button id="btn-batch-cancel" class="btn" title="Bỏ chọn tất cả (Esc)">
-        <span>Bỏ chọn</span>
+      <button id="btn-batch-cancel" class="btn icon-only-btn" data-tip="Bỏ chọn tất cả (Esc)" title="Bỏ chọn tất cả (Esc)" aria-label="Bỏ chọn tất cả (Esc)">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        <span class="btn-label">Bỏ chọn</span>
       </button>
     </div>
   </div>
@@ -1777,9 +3568,16 @@ body.lb-open { overflow: hidden; }
       <div id="ui-modal-msg"></div>
       <input id="ui-modal-input" type="text" autocomplete="off" style="display:none;" />
       <div class="ui-modal-actions">
-        <button id="ui-modal-cancel" class="btn">Hủy</button>
-        <button id="ui-modal-ok" class="btn btn-primary">OK</button>
+        <button id="ui-modal-cancel" class="btn" data-tip="Hủy" title="Hủy" aria-label="Hủy">Hủy</button>
+        <button id="ui-modal-ok" class="btn btn-primary" data-tip="OK" title="OK" aria-label="OK">OK</button>
       </div>
+    </div>
+  </div>
+
+  <div id="hover-preview" class="hover-preview-overlay">
+    <div class="hover-preview-box">
+      <div class="hover-preview-spinner"></div>
+      <img id="hover-preview-img" src="" alt="Xem trước" draggable="false" />
     </div>
   </div>
 
@@ -1794,6 +3592,7 @@ body.lb-open { overflow: hidden; }
     let trashFiles = [];   // file đã chuyển vào thư mục _Đã xóa (chỉ ở chế độ liên kết thư mục)
     let displayedFiles = [];
     let albums = [];
+    let playlists = [];
     let currentAlbumId = 'all'; // 'all', 'unassigned', or custom album id
     let selectedKeys = new Set();
     let isSelectionMode = false;
@@ -1859,13 +3658,14 @@ body.lb-open { overflow: hidden; }
     const albumHeaderBar = document.getElementById('album-header-bar');
     const currentAlbumNameText = document.getElementById('current-album-name-text');
     const currentAlbumMeta = document.getElementById('current-album-meta');
-    const btnPlayAll = document.getElementById('btn-play-all');
     const btnToggleSelect = document.getElementById('btn-toggle-select');
     const btnRenameAlbum = document.getElementById('btn-rename-album');
     const btnDeleteAlbum = document.getElementById('btn-delete-album');
+    const btnRemoveCover = document.getElementById('btn-remove-cover');
 
     // Batch Action Bar Elements
     const batchActionBar = document.getElementById('batch-action-bar');
+    const btnSetCover = document.getElementById('btn-set-cover');
     const batchCountBadge = document.getElementById('batch-count-badge');
     const batchText = document.getElementById('batch-text');
     const btnBatchPlay = document.getElementById('btn-batch-play');
@@ -1932,6 +3732,17 @@ body.lb-open { overflow: hidden; }
       return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
         { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
       ));
+    }
+
+    function setBtnLabel(btn, text) {
+      const el = typeof btn === 'string' ? document.getElementById(btn) : btn;
+      if (!el) return;
+      const str = String(text == null ? '' : text);
+      const span = el.querySelector('.btn-label') || el.querySelector('span');
+      if (span) span.textContent = str;
+      el.setAttribute('data-tip', str);
+      el.setAttribute('aria-label', str);
+      el.setAttribute('title', str);
     }
 
     // Hộp thoại riêng (thay confirm/prompt/alert của trình duyệt)
@@ -2094,7 +3905,7 @@ body.lb-open { overflow: hidden; }
     function initDB() {
       return new Promise((resolve) => {
         try {
-          const req = indexedDB.open('MediaViewerDB', 4);
+          const req = indexedDB.open('MediaViewerDB', 5);
           req.onupgradeneeded = (e) => {
             const d = e.target.result;
             const utx = e.target.transaction;
@@ -2102,6 +3913,7 @@ body.lb-open { overflow: hidden; }
             if (!d.objectStoreNames.contains('albums')) d.createObjectStore('albums', { keyPath: 'id' });
             if (!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', { keyPath: 'key' });
             if (!d.objectStoreNames.contains('handles')) d.createObjectStore('handles', { keyPath: 'key' });
+            if (!d.objectStoreNames.contains('playlists')) d.createObjectStore('playlists', { keyPath: 'id' });
             // Migrate từ v1/v2: tách file gốc (blob) ra store 'blobs', record 'media' chỉ còn metadata
             if (e.oldVersion > 0 && e.oldVersion < 3) {
               const media = utx.objectStore('media');
@@ -2245,13 +4057,15 @@ body.lb-open { overflow: hidden; }
       trashFiles.forEach(it => { it._deleted = true; });
       linkRoot = { handle: null, name: '', granted: false };
       linkedIgnored = new Set();
+      playlists = [];
       if (!db) return;
       try {
-        const tx = db.transaction(['media', 'blobs', 'albums', 'handles'], 'readwrite');
+        const tx = db.transaction(['media', 'blobs', 'albums', 'handles', 'playlists'], 'readwrite');
         tx.objectStore('media').clear();
         tx.objectStore('blobs').clear();
         tx.objectStore('albums').clear();
         tx.objectStore('handles').clear();
+        tx.objectStore('playlists').clear();
         await txDone(tx);
       } catch (err) { /* bỏ qua */ }
     }
@@ -2304,6 +4118,52 @@ body.lb-open { overflow: hidden; }
         } catch { resolve(); }
       });
     }
+    // Quản lý Playlists trong IndexedDB
+    function savePlaylistRecord(playlist) {
+      if (!db) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('playlists', 'readwrite');
+          tx.objectStore('playlists').put(playlist);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
+    function loadAllPlaylists() {
+      if (!db) return Promise.resolve([]);
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('playlists', 'readonly');
+          const req = tx.objectStore('playlists').getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } catch { resolve([]); }
+      });
+    }
+
+    function deletePlaylistRecord(id) {
+      if (!db || !id) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('playlists', 'readwrite');
+          tx.objectStore('playlists').delete(id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+
+    // Khớp lại file cho playlist: tìm theo key, nếu không thấy thì khớp theo name + size
+    function resolvePlaylistItem(entry) {
+      if (!entry) return null;
+      let match = rawFiles.find(f => f.key === entry.key);
+      if (match) return match;
+      match = rawFiles.find(f => f.name === entry.name && f.size === entry.size);
+      if (match) return match;
+      return null;
+    }
     function deleteAlbumRecord(id) { return deleteAlbumRecords([id]); }
 
     function loadAllAlbumsFromDB() {
@@ -2316,6 +4176,22 @@ body.lb-open { overflow: hidden; }
           req.onerror = () => resolve([]);
         } catch { resolve([]); }
       });
+    }
+
+    // Lấy item ảnh bìa (ưu tiên coverKey nếu còn tồn tại, nếu không lấy ảnh đầu tiên theo tên A-Z)
+    function getAlbumCover(album) {
+      if (!album) return null;
+      const albumFiles = rawFiles.filter(f => f.albumId === album.id);
+      if (albumFiles.length === 0) return null;
+
+      if (album.coverKey) {
+        const found = albumFiles.find(f => f.key === album.coverKey);
+        if (found) return found;
+      }
+
+      const sorted = albumFiles.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      const firstWithThumb = sorted.find(f => f.thumbUrl);
+      return firstWithThumb || sorted[0] || null;
     }
 
     // ---- URL file gốc: tạo khi cần xem, thu hồi khi rời đi (tiết kiệm RAM) ----
@@ -2421,16 +4297,38 @@ body.lb-open { overflow: hidden; }
 
     function updateCardThumb(item) {
       const card = cardEls.get(item.key);
-      if (!card || !item.thumbUrl) return;
-      const wrap = card.querySelector('.thumb-wrapper');
-      if (!wrap) return;
-      const ph = wrap.querySelector('.thumb-ph');
-      const img = document.createElement('img');
-      img.src = item.thumbUrl;
-      img.alt = item.name;
-      img.decoding = 'async';
-      wrap.insertBefore(img, wrap.firstChild);
-      if (ph) ph.remove();
+      if (card && item.thumbUrl) {
+        const wrap = card.classList.contains('thumb-wrapper') ? card : card.querySelector('.thumb-wrapper');
+        if (wrap) {
+          const ph = wrap.querySelector('.thumb-ph');
+          if (ph) ph.remove();
+          Array.from(wrap.children).forEach(ch => {
+            if (ch.tagName && ch.tagName.toLowerCase() === 'svg') ch.remove();
+          });
+          const existingImg = wrap.querySelector('img');
+          if (existingImg) {
+            existingImg.src = item.thumbUrl;
+            existingImg.alt = item.name;
+          } else {
+            const img = document.createElement('img');
+            img.src = item.thumbUrl;
+            img.alt = item.name;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            wrap.insertBefore(img, wrap.firstChild);
+          }
+        }
+      }
+
+      if (item.albumId && item.albumId !== 'unassigned') {
+        const targetAlb = albums.find(a => a.id === item.albumId);
+        if (targetAlb) {
+          const cover = getAlbumCover(targetAlb);
+          if (cover && cover.key === item.key) {
+            renderAlbumSidebar();
+          }
+        }
+      }
     }
 
     async function processThumb(it) {
@@ -2489,12 +4387,14 @@ body.lb-open { overflow: hidden; }
       await initDB();
       if (!db) showToast('Không dùng được bộ nhớ trình duyệt (chế độ riêng tư?). File chỉ xem được đến khi đóng trang.', true);
       requestPersistence();
-      const [savedMeta, savedAlbums] = await Promise.all([
+      const [savedMeta, savedAlbums, savedPlaylists] = await Promise.all([
         loadAllMeta(),
-        loadAllAlbumsFromDB()
+        loadAllAlbumsFromDB(),
+        loadAllPlaylists()
       ]);
 
       albums = savedAlbums || [];
+      playlists = savedPlaylists || [];
       const allSaved = (savedMeta || []).map(itemFromMeta);
       rawFiles = allSaved.filter(i => !i.trashed);
       trashFiles = allSaved.filter(i => i.trashed);
@@ -2514,8 +4414,18 @@ body.lb-open { overflow: hidden; }
     // ==========================================
     // SIDEBAR & ALBUM MANAGEMENT
     // ==========================================
+    const SIDEBAR_AUTOHIDE_DELAY = 2200;
+    let setSidebarMode = null;
+    let cycleSidebarMode = null;
+
     btnToggleSidebar.addEventListener('click', () => {
-      albumSidebar.classList.toggle('collapsed');
+      if (window.innerWidth <= 768 || !window.matchMedia('(hover: hover)').matches) {
+        const isShowing = albumSidebar.classList.toggle('show');
+        const bd = document.getElementById('sidebar-backdrop');
+        if (bd) bd.classList.toggle('show', isShowing);
+      } else if (typeof cycleSidebarMode === 'function') {
+        cycleSidebarMode();
+      }
     });
 
     albumNavUnassigned.addEventListener('click', () => {
@@ -2632,9 +4542,14 @@ body.lb-open { overflow: hidden; }
         div.className = 'album-nav-item' + (currentAlbumId === alb.id ? ' active' : '');
         div.dataset.albumId = alb.id;
 
+        const cover = getAlbumCover(alb);
+        const iconHtml = (cover && cover.thumbUrl)
+          ? `<img class="album-cover-thumb" src="${cover.thumbUrl}" alt="" loading="lazy" decoding="async" />`
+          : `<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
+
         div.innerHTML = `
           <div class="album-item-left">
-            <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            ${iconHtml}
             <span class="album-name" title="${esc(alb.name)}">${esc(alb.name)}</span>
           </div>
           <span class="album-badge">${albCount}</span>
@@ -2660,6 +4575,125 @@ body.lb-open { overflow: hidden; }
         customAlbumsList.appendChild(div);
       });
 
+      // Render Rail items
+      const railWrap = document.getElementById('rail-mode-wrap');
+      if (railWrap) {
+        railWrap.innerHTML = '';
+
+        // Nút Play Media trên rail
+        const pmRailBtn = document.createElement('button');
+        pmRailBtn.className = 'rail-item rail-playmedia-btn';
+        pmRailBtn.setAttribute('data-tip', 'Play Media');
+        pmRailBtn.setAttribute('title', 'Play Media');
+        pmRailBtn.setAttribute('aria-label', 'Play Media');
+        pmRailBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+        pmRailBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (typeof openPlayMedia === 'function') openPlayMedia();
+        });
+        railWrap.appendChild(pmRailBtn);
+
+        // Nút chuyển chế độ trên rail
+        const modeBtn = document.createElement('button');
+        modeBtn.className = 'rail-item rail-mode-btn';
+        modeBtn.setAttribute('data-tip', 'Chế độ: Dải hẹp (Bấm để chuyển)');
+        modeBtn.setAttribute('title', 'Chế độ: Dải hẹp (Bấm để chuyển)');
+        modeBtn.setAttribute('aria-label', 'Chế độ: Dải hẹp (Bấm để chuyển)');
+        modeBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 18h2V6H4v12zm4 0h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2zm2-10h8v8h-8V8z"/></svg>';
+        modeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (typeof cycleSidebarMode === 'function') cycleSidebarMode();
+        });
+        railWrap.appendChild(modeBtn);
+
+        // Tất cả file
+        const itemAll = document.createElement('div');
+        itemAll.className = 'rail-item' + (currentAlbumId === 'all' ? ' active' : '');
+        itemAll.setAttribute('data-tip', `Tất cả file (${countAll})`);
+        itemAll.setAttribute('title', `Tất cả file (${countAll})`);
+        itemAll.setAttribute('aria-label', `Tất cả file (${countAll})`);
+        itemAll.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>';
+        itemAll.addEventListener('click', () => {
+          currentAlbumId = 'all';
+          renderAlbumSidebar();
+          applyFilterAndRender();
+        });
+        railWrap.appendChild(itemAll);
+
+        // Chưa phân loại
+        if (countUnassigned > 0 || currentAlbumId === 'unassigned') {
+          const itemUn = document.createElement('div');
+          itemUn.className = 'rail-item' + (currentAlbumId === 'unassigned' ? ' active' : '');
+          itemUn.setAttribute('data-tip', `Chưa phân loại (${countUnassigned})`);
+          itemUn.setAttribute('title', `Chưa phân loại (${countUnassigned})`);
+          itemUn.setAttribute('aria-label', `Chưa phân loại (${countUnassigned})`);
+          itemUn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>';
+          itemUn.addEventListener('click', () => {
+            currentAlbumId = 'unassigned';
+            renderAlbumSidebar();
+            applyFilterAndRender();
+          });
+          setupAlbumDropTarget(itemUn, 'unassigned');
+          railWrap.appendChild(itemUn);
+        }
+
+        // Thùng rác
+        if (linkRoot.handle && (trashFiles.length > 0 || currentAlbumId === 'trash')) {
+          const itemTrash = document.createElement('div');
+          itemTrash.className = 'rail-item' + (currentAlbumId === 'trash' ? ' active' : '');
+          itemTrash.setAttribute('data-tip', `Thùng rác (${trashFiles.length})`);
+          itemTrash.setAttribute('title', `Thùng rác (${trashFiles.length})`);
+          itemTrash.setAttribute('aria-label', `Thùng rác (${trashFiles.length})`);
+          itemTrash.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+          itemTrash.addEventListener('click', () => {
+            clearSelection();
+            currentAlbumId = 'trash';
+            renderAlbumSidebar();
+            applyFilterAndRender();
+          });
+          railWrap.appendChild(itemTrash);
+        }
+
+        // Tạo album
+        const createBtn = document.createElement('button');
+        createBtn.className = 'rail-item rail-create-btn';
+        createBtn.setAttribute('data-tip', 'Tạo Album mới');
+        createBtn.setAttribute('title', 'Tạo Album mới');
+        createBtn.setAttribute('aria-label', 'Tạo Album mới');
+        createBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
+        createBtn.addEventListener('click', () => {
+          if (btnCreateAlbum) btnCreateAlbum.click();
+        });
+        railWrap.appendChild(createBtn);
+
+        // Danh sách custom albums trên rail
+        albums.forEach(alb => {
+          const albCount = rawFiles.filter(f => f.albumId === alb.id).length;
+          const rItem = document.createElement('div');
+          rItem.className = 'rail-item' + (currentAlbumId === alb.id ? ' active' : '');
+          rItem.setAttribute('data-album-id', alb.id);
+          rItem.setAttribute('data-tip', `${alb.name} (${albCount})`);
+          rItem.setAttribute('title', `${alb.name} (${albCount})`);
+          rItem.setAttribute('aria-label', `${alb.name} (${albCount})`);
+
+          const cover = getAlbumCover(alb);
+          if (cover && cover.thumbUrl) {
+            rItem.classList.add('has-cover');
+            rItem.innerHTML = `<img class="rail-cover-img" src="${cover.thumbUrl}" alt="" loading="lazy" decoding="async" />`;
+          } else {
+            rItem.innerHTML = '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>';
+          }
+
+          rItem.addEventListener('click', () => {
+            currentAlbumId = alb.id;
+            renderAlbumSidebar();
+            applyFilterAndRender();
+          });
+          setupAlbumDropTarget(rItem, alb.id);
+          railWrap.appendChild(rItem);
+        });
+      }
+
       // Update Album Header Bar
       let title = 'Tất cả file';
       const isCustom = albums.some(a => a.id === currentAlbumId);
@@ -2675,13 +4709,17 @@ body.lb-open { overflow: hidden; }
 
       btnRenameAlbum.style.display = isCustom ? 'inline-flex' : 'none';
       btnDeleteAlbum.style.display = isCustom ? 'inline-flex' : 'none';
+      if (btnRemoveCover) {
+        const curAlbumObj = isCustom ? albums.find(a => a.id === currentAlbumId) : null;
+        btnRemoveCover.style.display = (curAlbumObj && curAlbumObj.coverKey) ? 'inline-flex' : 'none';
+      }
 
       // Update Batch Album Dropdown menu
       updateBatchAlbumMenu();
 
       // Nút "Xóa tất cả": đổi nhãn theo album đang xem
-      const clearLabel = btnClearAll.querySelector('span');
-      if (clearLabel) clearLabel.textContent = (currentAlbumId === 'all') ? 'Xóa tất cả' : (currentAlbumId === 'trash' ? 'Dọn sạch thùng rác' : 'Xóa file trong album');
+      const clearText = (currentAlbumId === 'all') ? 'Xóa tất cả' : (currentAlbumId === 'trash' ? 'Dọn sạch thùng rác' : 'Xóa file trong album');
+      setBtnLabel(btnClearAll, clearText);
       updateAlbumManageBar();
       updateTrashUI();
     }
@@ -2700,7 +4738,7 @@ body.lb-open { overflow: hidden; }
       }
       albumManageBar.style.display = isAlbumSelectMode ? 'flex' : 'none';
       btnSelectAlbums.classList.toggle('active', isAlbumSelectMode);
-      btnAlbumDeleteSelected.querySelector('span').textContent = `Xóa (${selectedAlbumIds.size})`;
+      setBtnLabel(btnAlbumDeleteSelected, `Xóa (${selectedAlbumIds.size})`);
       btnAlbumDeleteSelected.disabled = selectedAlbumIds.size === 0;
     }
 
@@ -2809,23 +4847,40 @@ body.lb-open { overflow: hidden; }
     }
 
     function updateSelectionUI() {
-      document.querySelectorAll('.image-card').forEach(card => {
-        const key = card.dataset.key;
-        if (selectedKeys.has(key)) {
-          card.classList.add('selected');
-        } else {
-          card.classList.remove('selected');
-        }
+      document.querySelectorAll('.image-card, .list-row, .filmstrip-thumb').forEach(el => {
+        const key = el.dataset.key;
+        const isSel = selectedKeys.has(key);
+        el.classList.toggle('selected', isSel);
+        const cb = el.querySelector('.list-check-box');
+        if (cb) cb.checked = isSel;
       });
 
       const count = selectedKeys.size;
       batchCountBadge.textContent = count;
       batchText.textContent = `Đã chọn ${count} file`;
 
+      if (btnBatchPlay) {
+        btnBatchPlay.style.display = count >= 2 ? '' : 'none';
+      }
+
+      if (btnSetCover) {
+        let canSetCover = false;
+        if (count === 1) {
+          const selKey = Array.from(selectedKeys)[0];
+          const item = rawFiles.find(f => f.key === selKey);
+          if (item && item.albumId && item.albumId !== 'unassigned' && albums.some(a => a.id === item.albumId)) {
+            canSetCover = true;
+          }
+        }
+        btnSetCover.style.display = canSetCover ? 'inline-flex' : 'none';
+      }
+
       if (count > 0) {
         batchActionBar.classList.add('show');
       } else {
         batchActionBar.classList.remove('show');
+        isSelectionMode = false;
+        if (batchAlbumMenu) batchAlbumMenu.classList.remove('show');
       }
     }
 
@@ -2840,12 +4895,49 @@ body.lb-open { overflow: hidden; }
 
     btnBatchCancel.addEventListener('click', clearSelection);
 
-    // Phát các file đã chọn
-    btnBatchPlay.addEventListener('click', () => {
-      if (selectedKeys.size === 0) return;
-      const selectedList = (currentAlbumId === 'trash' ? trashFiles : rawFiles).filter(item => selectedKeys.has(item.key));
+    // Đặt làm ảnh bìa album
+    if (btnSetCover) {
+      btnSetCover.addEventListener('click', async () => {
+        if (selectedKeys.size !== 1) return;
+        const selKey = Array.from(selectedKeys)[0];
+        const item = rawFiles.find(f => f.key === selKey);
+        if (!item || !item.albumId || item.albumId === 'unassigned') return;
+        const targetAlb = albums.find(a => a.id === item.albumId);
+        if (!targetAlb) return;
+
+        targetAlb.coverKey = item.key;
+        await saveAlbumRecord(targetAlb);
+        renderAlbumSidebar();
+        updateSelectionUI();
+        showToast(`Đã đặt "${item.name}" làm ảnh bìa cho album "${targetAlb.name}"`);
+      });
+    }
+
+    // Bỏ ảnh bìa tùy chọn (quay lại mặc định)
+    if (btnRemoveCover) {
+      btnRemoveCover.addEventListener('click', async () => {
+        const curAlbum = albums.find(a => a.id === currentAlbumId);
+        if (!curAlbum || !curAlbum.coverKey) return;
+        delete curAlbum.coverKey;
+        await saveAlbumRecord(curAlbum);
+        renderAlbumSidebar();
+        showToast(`Đã bỏ ảnh bìa tùy chọn của album "${curAlbum.name}" (sử dụng ảnh mặc định)`);
+      });
+    }
+
+    // Phát các file đã chọn theo thứ tự đang hiển thị và tự bắt đầu trình chiếu xoay vòng
+    function playSelected() {
+      if (selectedKeys.size < 2) return;
+      const ordered = displayedFiles.filter(item => selectedKeys.has(item.key));
+      const selectedList = ordered.length > 0
+        ? ordered
+        : (currentAlbumId === 'trash' ? trashFiles : rawFiles).filter(item => selectedKeys.has(item.key));
+      if (selectedList.length === 0) return;
       openLightbox(0, selectedList);
-    });
+      startSlideshow();
+    }
+
+    btnBatchPlay.addEventListener('click', playSelected);
 
     btnBatchAlbum.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2882,14 +4974,7 @@ body.lb-open { overflow: hidden; }
       restoreFlow(trashFiles.slice());
     });
 
-    // Phát tất cả trong album hiện tại
-    btnPlayAll.addEventListener('click', () => {
-      if (displayedFiles.length === 0) {
-        showToast('Album này hiện chưa có file nào!');
-        return;
-      }
-      openLightbox(0);
-    });
+
 
     // ==========================================
     // TOPBAR DROPDOWN & SPEED DROPDOWN LOGIC
@@ -3155,8 +5240,21 @@ body.lb-open { overflow: hidden; }
       mainHeader.classList.remove('hidden-bar');
     });
 
+    function applyThumbSize(val, persist = true) {
+      const num = Math.max(140, Math.min(340, parseInt(val, 10) || 200));
+      if (sizeSlider) sizeSlider.value = String(num);
+      document.documentElement.style.setProperty('--thumb-size', `${num}px`);
+      if (persist) {
+        try { localStorage.setItem('mv_thumb_size', String(num)); } catch (err) {}
+      }
+    }
+
     sizeSlider.addEventListener('input', (e) => {
-      document.documentElement.style.setProperty('--thumb-size', `${e.target.value}px`);
+      applyThumbSize(e.target.value, true);
+    });
+
+    sizeSlider.addEventListener('change', (e) => {
+      applyThumbSize(e.target.value, true);
     });
 
     // Native Drag and Drop outside folder/files
@@ -3251,6 +5349,18 @@ body.lb-open { overflow: hidden; }
       const sizes = ['B', 'KB', 'MB', 'GB'];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '—';
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return '—';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      return `${day}/${m}/${y} ${h}:${min}`;
     }
 
     function detectMediaType(filename) {
@@ -3388,10 +5498,16 @@ body.lb-open { overflow: hidden; }
         if (sortType === 'date-desc') return b.lastModified - a.lastModified;
         if (sortType === 'date-asc') return a.lastModified - b.lastModified;
         if (sortType === 'size-desc') return b.size - a.size;
+        if (sortType === 'size-asc') return a.size - b.size;
+        if (sortType === 'type-asc' || sortType === 'type-desc') {
+          const extA = a.name.split('.').pop().toLowerCase();
+          const extB = b.name.split('.').pop().toLowerCase();
+          const cmp = extA.localeCompare(extB);
+          return sortType === 'type-asc' ? cmp : -cmp;
+        }
         return 0;
       });
 
-      // Update header meta count
       const totalBytes = displayedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
       currentAlbumMeta.textContent = `${displayedFiles.length} file • ${formatBytes(totalBytes)}`;
 
@@ -3408,82 +5524,26 @@ body.lb-open { overflow: hidden; }
       if (displayedFiles.length === 0) {
         emptyState.style.display = 'flex';
         gallery.style.display = 'none';
-        albumHeaderBar.style.display = (rawFiles.length > 0 || currentAlbumId === 'trash') ? 'flex' : 'none';
+        albumHeaderBar.style.display = 'flex';
+        cardEls.clear();
         return;
       }
 
       emptyState.style.display = 'none';
       albumHeaderBar.style.display = 'flex';
-      gallery.style.display = 'grid';
+      gallery.style.display = '';
       gallery.innerHTML = '';
       cardEls.clear();
 
-      const frag = document.createDocumentFragment();
+      const currentMode = (document.body.dataset.view) || 'grid';
 
-      displayedFiles.forEach((item, idx) => {
-        const card = document.createElement('div');
-        card.className = 'image-card' + (selectedKeys.has(item.key) ? ' selected' : '');
-        card.dataset.key = item.key;
-        card.draggable = true;
-
-        const ext = esc(item.name.split('.').pop().toUpperCase());
-        const inner = item.thumbUrl
-          ? `<img src="${item.thumbUrl}" alt="${esc(item.name)}" loading="lazy" decoding="async" />`
-          : `<div class="video-placeholder-icon thumb-ph">${PH_SVG[item.type] || PH_SVG.photo}</div>`;
-        const badge = item.type === 'video'
-          ? `<div class="video-badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>${ext}</span></div>`
-          : '';
-
-        card.innerHTML = `
-          <div class="card-select-btn" title="Chọn file">
-            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-          </div>
-          <div class="thumb-wrapper">${inner}${badge}</div>
-          <div class="card-meta">
-            <div class="card-title" title="${esc(item.name)}">${esc(item.name)}</div>
-            <div class="card-sub">
-              <span>${ext}</span>
-              <span>${formatBytes(item.size)}</span>
-            </div>
-          </div>
-        `;
-
-        // Selection checkbox click
-        const selectBtn = card.querySelector('.card-select-btn');
-        selectBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toggleSelect(item.key);
-        });
-
-        // Card Click: if in select mode or items selected, toggle select; else open lightbox
-        card.addEventListener('click', (e) => {
-          if (isSelectionMode || selectedKeys.size > 0 || e.shiftKey || e.metaKey || e.ctrlKey) {
-            toggleSelect(item.key);
-          } else {
-            openLightbox(idx);
-          }
-        });
-
-        // Drag and Drop (Card to Album)
-        card.addEventListener('dragstart', (e) => {
-          let keysToDrag = [item.key];
-          if (selectedKeys.has(item.key) && selectedKeys.size > 1) {
-            keysToDrag = Array.from(selectedKeys);
-          }
-          e.dataTransfer.setData('application/json', JSON.stringify({ keys: keysToDrag }));
-          e.dataTransfer.effectAllowed = 'move';
-          card.classList.add('dragging');
-        });
-
-        card.addEventListener('dragend', () => {
-          card.classList.remove('dragging');
-        });
-
-        cardEls.set(item.key, card);
-        frag.appendChild(card);
-      });
-
-      gallery.appendChild(frag);
+      if (currentMode === 'list') {
+        renderListView();
+      } else if (currentMode === 'gallery') {
+        renderGalleryView();
+      } else {
+        renderGridView();
+      }
     }
 
     // Tìm kiếm: chờ người dùng gõ xong mới vẽ lại lưới
@@ -3627,26 +5687,138 @@ body.lb-open { overflow: hidden; }
       }
     }, { passive: false });
 
-    lbBody.addEventListener('mousedown', (e) => {
-      if (e.target.closest('button') || e.target.closest('.lightbox-actions') || e.target.closest('.nav-btn') || e.target.closest('video') || e.target.closest('.help-modal')) return;
-      if (zoomLevel > 1) {
-        isDragging = true;
-        dragStartX = e.clientX - panX;
-        dragStartY = e.clientY - panY;
-      }
-    });
+    // ==========================================
+    // KÉO CHUỘT TRONG TRÌNH XEM (DRAG SWITCH & CLOSE)
+    // ==========================================
+    const DRAG_SWITCH_PX = 60;
+    const DRAG_CLOSE_PX = 80;
+    let cleanupMouseDrag = null;
 
-    window.addEventListener('mousemove', (e) => {
-      if (isDragging && zoomLevel > 1) {
-        panX = e.clientX - dragStartX;
-        panY = e.clientY - dragStartY;
-        updateTransform();
-      }
-    });
+    (function initMouseDragControls() {
+      let isPointerDown = false;
+      let startX = 0;
+      let startY = 0;
+      let diffX = 0;
+      let diffY = 0;
+      let isPanMode = false;
+      let isDragGesture = false;
 
-    window.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
+      function onPointerDown(e) {
+        if (e.pointerType !== 'mouse') return;
+        if (e.button !== 0) return;
+
+        const tgt = e.target;
+        if (tgt.closest('button, input, .lightbox-actions, .nav-btn, .help-modal, .dropdown-menu, .lb-error')) return;
+
+        // Bỏ qua thanh điều khiển video (110px dưới cùng của video)
+        if (lbCurrentItem && lbCurrentItem.type === 'video') {
+          if (e.clientY > window.innerHeight - 110) return;
+        }
+
+        isPointerDown = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        diffX = 0;
+        diffY = 0;
+        isPanMode = (zoomLevel > 1);
+        isDragGesture = false;
+
+        if (isPanMode) {
+          dragStartX = e.clientX - panX;
+          dragStartY = e.clientY - panY;
+          lbBody.classList.add('panning');
+        } else {
+          lbBody.classList.add('mouse-dragging');
+        }
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+      }
+
+      function onPointerMove(e) {
+        if (!isPointerDown) return;
+        diffX = e.clientX - startX;
+        diffY = e.clientY - startY;
+
+        if (isPanMode) {
+          isDragging = true;
+          panX = e.clientX - dragStartX;
+          panY = e.clientY - dragStartY;
+          updateTransform();
+          return;
+        }
+
+        if (Math.hypot(diffX, diffY) > 6) {
+          isDragGesture = true;
+        }
+
+        if (isDragGesture) {
+          if (Math.abs(diffX) > Math.abs(diffY)) {
+            // Kéo ngang có phản hồi trực quan nhẹ
+            const clampedX = Math.max(-120, Math.min(120, diffX * 0.65));
+            lbContainer.style.transform = `translateX(${clampedX}px)`;
+            lbContainer.style.opacity = `${Math.max(0.65, 1 - Math.abs(clampedX) / 360)}`;
+          } else {
+            // Kéo dọc có phản hồi mờ nhẹ
+            const clampedY = Math.max(-140, Math.min(140, diffY * 0.7));
+            lbContainer.style.transform = `translateY(${clampedY}px)`;
+            lbContainer.style.opacity = `${Math.max(0.5, 1 - Math.abs(clampedY) / 280)}`;
+          }
+        }
+      }
+
+      function onPointerUp(e) {
+        if (!isPointerDown) return;
+        isPointerDown = false;
+        isDragging = false;
+        lbBody.classList.remove('mouse-dragging');
+
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        window.removeEventListener('pointercancel', onPointerUp);
+
+        if (isPanMode) {
+          if (zoomLevel <= 1) lbBody.classList.remove('panning');
+          return;
+        }
+
+        // Đặt lại transform của container kèm transition ngắn
+        lbContainer.classList.add('snap-back');
+        lbContainer.style.transform = '';
+        lbContainer.style.opacity = '';
+        setTimeout(() => lbContainer.classList.remove('snap-back'), 200);
+
+        if (isDragGesture) {
+          // Phân biệt hướng kéo ngang và dọc
+          if (Math.abs(diffX) >= DRAG_SWITCH_PX && Math.abs(diffX) > Math.abs(diffY) * 1.2) {
+            if (diffX < 0) {
+              nextItem(true);
+            } else {
+              prevItem(true);
+            }
+          } else if (Math.abs(diffY) >= DRAG_CLOSE_PX && Math.abs(diffY) > Math.abs(diffX) * 1.2) {
+            closeLightbox();
+          }
+        }
+      }
+
+      cleanupMouseDrag = function() {
+        isPointerDown = false;
+        isDragging = false;
+        lbBody.classList.remove('mouse-dragging', 'panning');
+        lbContainer.classList.remove('snap-back');
+        lbContainer.style.transform = '';
+        lbContainer.style.opacity = '';
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        window.removeEventListener('pointercancel', onPointerUp);
+      };
+
+      lbBody.addEventListener('pointerdown', onPointerDown);
+    })();
+
+
 
     lbContainer.addEventListener('dblclick', (e) => {
       if (e.target.closest('button') || e.target.closest('video') || e.target.closest('.help-modal')) return;
@@ -3681,6 +5853,7 @@ body.lb-open { overflow: hidden; }
       stopSlideshow();
       pauseCurrentVideo();
       clearTimeout(uiTimer);
+      if (typeof cleanupMouseDrag === 'function') cleanupMouseDrag();
       helpModal.classList.remove('active');
       if (lbVideoModeMenu) lbVideoModeMenu.classList.remove('show');
       if (lbSpeedMenu) lbSpeedMenu.classList.remove('show');
@@ -3816,10 +5989,14 @@ body.lb-open { overflow: hidden; }
     }
 
     function startSlideshow() {
+      if (slideshowTimer) {
+        clearInterval(slideshowTimer);
+        slideshowTimer = null;
+      }
       hideLightboxUI();
       slideshowTimer = setInterval(() => nextItem(false), slideshowSpeed);
       slideshowIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-      lbSlideshow.title = "Dừng trình chiếu (Space)";
+      setBtnLabel(lbSlideshow, 'Dừng trình chiếu (Space)');
     }
 
     function stopSlideshow() {
@@ -3827,7 +6004,7 @@ body.lb-open { overflow: hidden; }
         clearInterval(slideshowTimer);
         slideshowTimer = null;
         slideshowIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-        lbSlideshow.title = "Tự động trình chiếu (Space)";
+        setBtnLabel(lbSlideshow, 'Tự động trình chiếu (Space)');
       }
     }
 
@@ -3993,7 +6170,7 @@ body.lb-open { overflow: hidden; }
       }
       // Toggle sidebar on B key when not in lightbox
       if (!lightbox.classList.contains('active') && (e.key === 'b' || e.key === 'B')) {
-        albumSidebar.classList.toggle('collapsed');
+        btnToggleSidebar.click();
         return;
       }
 
@@ -4068,74 +6245,247 @@ body.lb-open { overflow: hidden; }
     });
 
     // Sidebar hover, 1-second hide timer, pin persistence and mobile backdrop.
-    (function initSidebarControls() {
+    function initSidebarControls() {
       const sidebar = document.getElementById('album-sidebar');
       const edgeTab = document.getElementById('sidebar-edge-tab');
       const backdrop = document.getElementById('sidebar-backdrop');
-      const pinBtn = document.getElementById('btn-pin-sidebar');
+      const modeBtn = document.getElementById('sidebar-mode-btn');
       const closeBtn = document.getElementById('btn-close-sidebar');
       if (!sidebar) return;
 
-      sidebar.classList.add('sidebar-overlay');
-      let isPinned = localStorage.getItem('mediaviewer_sidebar_pinned') === 'true';
-      let sidebarHideTimer = null;
+      const MODE_ICONS = {
+        pinned: '<svg viewBox="0 0 24 24"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>',
+        auto: '<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>',
+        rail: '<svg viewBox="0 0 24 24"><path d="M4 18h2V6H4v12zm4 0h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2zm2-10h8v8h-8V8z"/></svg>'
+      };
 
-      function updatePinState() {
-        sidebar.classList.toggle('pinned', isPinned);
-        document.body.classList.toggle('sidebar-pinned', isPinned);
-        if (pinBtn) {
-          pinBtn.classList.toggle('active', isPinned);
-          const text = pinBtn.querySelector('.pin-text');
-          if (text) text.textContent = isPinned ? 'Đã ghim' : 'Ghim';
+      const MODE_TIPS = {
+        pinned: 'Chế độ: Đã ghim (Bấm để chuyển)',
+        auto: 'Chế độ: Tự ẩn (Bấm để chuyển)',
+        rail: 'Chế độ: Dải hẹp (Bấm để chuyển)'
+      };
+
+      let currentMode = 'pinned';
+      try {
+        const saved = localStorage.getItem('mv_sidebar_mode');
+        if (saved === 'pinned' || saved === 'auto' || saved === 'rail') {
+          currentMode = saved;
+        } else {
+          const oldPinned = localStorage.getItem('mediaviewer_sidebar_pinned');
+          if (oldPinned === 'false') currentMode = 'auto';
+        }
+      } catch (err) {}
+
+      let currentWidth = 280;
+      try {
+        const savedW = parseInt(localStorage.getItem('mv_sidebar_width'), 10);
+        if (savedW >= 200 && savedW <= 480) currentWidth = savedW;
+      } catch (err) {}
+
+      let hideTimer = null;
+
+      function isDesktop() {
+        return window.innerWidth > 768 && window.matchMedia('(hover: hover)').matches;
+      }
+
+      function applyWidth(w) {
+        currentWidth = Math.max(200, Math.min(480, w));
+        document.documentElement.style.setProperty('--sidebar-width', `${currentWidth}px`);
+        if (currentMode === 'pinned' && isDesktop()) {
+          sidebar.style.width = `${currentWidth}px`;
+        } else {
+          sidebar.style.width = '';
         }
       }
 
+      setSidebarMode = function(mode) {
+        if (mode !== 'pinned' && mode !== 'auto' && mode !== 'rail') mode = 'pinned';
+        currentMode = mode;
+        try { localStorage.setItem('mv_sidebar_mode', mode); } catch (err) {}
+
+        document.body.dataset.sidebarMode = mode;
+        sidebar.dataset.mode = mode;
+
+        if (modeBtn) {
+          modeBtn.innerHTML = (MODE_ICONS[mode] || MODE_ICONS.pinned) + '<span class="btn-label">Chế độ thanh bên</span>';
+          setBtnLabel(modeBtn, MODE_TIPS[mode] || MODE_TIPS.pinned);
+        }
+
+        clearTimeout(hideTimer);
+        hideTimer = null;
+
+        if (isDesktop()) {
+          sidebar.classList.remove('collapsed');
+          if (mode === 'pinned') {
+            document.body.classList.add('sidebar-pinned');
+            sidebar.classList.add('pinned');
+            sidebar.classList.remove('show');
+            applyWidth(currentWidth);
+            backdrop?.classList.remove('show');
+          } else if (mode === 'rail') {
+            document.body.classList.remove('sidebar-pinned');
+            sidebar.classList.remove('pinned', 'show');
+            sidebar.style.width = '';
+            backdrop?.classList.remove('show');
+          } else { // auto
+            document.body.classList.remove('sidebar-pinned');
+            sidebar.classList.remove('pinned', 'show');
+            sidebar.style.width = '';
+            backdrop?.classList.remove('show');
+          }
+        } else {
+          document.body.classList.remove('sidebar-pinned');
+          sidebar.classList.remove('pinned');
+          sidebar.style.width = '';
+        }
+      };
+
+      cycleSidebarMode = function() {
+        const modes = ['pinned', 'auto', 'rail'];
+        const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
+        setSidebarMode(next);
+        showToast(`Thanh bên: ${next === 'pinned' ? 'Đã ghim' : (next === 'auto' ? 'Tự ẩn' : 'Dải hẹp')}`);
+      };
+
       function openSidebar() {
-        clearTimeout(sidebarHideTimer);
-        sidebarHideTimer = null;
-        sidebar.classList.add('show');
-        if (window.innerWidth <= 768) backdrop?.classList.add('show');
+        if (!isDesktop()) {
+          clearTimeout(hideTimer);
+          hideTimer = null;
+          sidebar.classList.add('show');
+          backdrop?.classList.add('show');
+          return;
+        }
+        if (currentMode === 'auto') {
+          clearTimeout(hideTimer);
+          hideTimer = null;
+          sidebar.classList.add('show');
+        }
       }
 
       function closeSidebar(immediate = false) {
-        if (isPinned && window.innerWidth > 768) return;
-        clearTimeout(sidebarHideTimer);
-        if (immediate) {
-          sidebar.classList.remove('show');
-          backdrop?.classList.remove('show');
-        } else {
-          sidebarHideTimer = setTimeout(() => {
+        if (!isDesktop()) {
+          clearTimeout(hideTimer);
+          if (immediate) {
             sidebar.classList.remove('show');
             backdrop?.classList.remove('show');
-          }, 1000);
+          } else {
+            hideTimer = setTimeout(() => {
+              sidebar.classList.remove('show');
+              backdrop?.classList.remove('show');
+            }, 1000);
+          }
+          return;
+        }
+
+        if (currentMode !== 'auto') return;
+
+        if (document.querySelector('.image-card.dragging') ||
+            document.querySelector('.dropdown-menu.show') ||
+            document.getElementById('ui-modal')?.classList.contains('show')) {
+          return;
+        }
+
+        clearTimeout(hideTimer);
+        if (immediate) {
+          sidebar.classList.remove('show');
+        } else {
+          hideTimer = setTimeout(() => {
+            sidebar.classList.remove('show');
+          }, SIDEBAR_AUTOHIDE_DELAY);
         }
       }
 
+      let resizer = document.getElementById('sidebar-resizer');
+      if (!resizer) {
+        resizer = document.createElement('div');
+        resizer.id = 'sidebar-resizer';
+        resizer.className = 'sidebar-resizer';
+        resizer.setAttribute('title', 'Kéo để đổi chiều rộng thanh bên');
+        sidebar.appendChild(resizer);
+      }
+
+      let isResizing = false;
+      let startX = 0;
+      let startW = 0;
+
+      resizer.addEventListener('mousedown', (e) => {
+        if (!isDesktop() || currentMode !== 'pinned') return;
+        isResizing = true;
+        startX = e.clientX;
+        startW = currentWidth;
+        document.body.classList.add('sidebar-resizing');
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const newW = startW + (e.clientX - startX);
+        applyWidth(newW);
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.classList.remove('sidebar-resizing');
+          try { localStorage.setItem('mv_sidebar_width', String(currentWidth)); } catch (err) {}
+        }
+      });
+
+      let hoverStrip = document.getElementById('sidebar-hover-strip');
+      if (!hoverStrip) {
+        hoverStrip = document.createElement('div');
+        hoverStrip.id = 'sidebar-hover-strip';
+        hoverStrip.className = 'sidebar-hover-strip';
+        document.body.appendChild(hoverStrip);
+      }
+
+
+
+
+      hoverStrip.addEventListener('mouseenter', openSidebar);
       sidebar.addEventListener('mouseenter', openSidebar);
       sidebar.addEventListener('mouseleave', () => closeSidebar(false));
       edgeTab?.addEventListener('mouseenter', openSidebar);
-      edgeTab?.addEventListener('click', () => sidebar.classList.contains('show') ? closeSidebar(true) : openSidebar());
+      edgeTab?.addEventListener('click', () => {
+        if (sidebar.classList.contains('show')) closeSidebar(true);
+        else openSidebar();
+      });
+
       backdrop?.addEventListener('click', () => closeSidebar(true));
       closeBtn?.addEventListener('click', (e) => { e.stopPropagation(); closeSidebar(true); });
-      pinBtn?.addEventListener('click', (e) => {
+      modeBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        isPinned = !isPinned;
-        localStorage.setItem('mediaviewer_sidebar_pinned', String(isPinned));
-        updatePinState();
-        if (isPinned) openSidebar(); else closeSidebar(false);
+        cycleSidebarMode();
       });
+
       sidebar.addEventListener('click', (e) => {
-        if (window.innerWidth <= 768 && !isAlbumSelectMode && e.target.closest('.album-nav-item')) closeSidebar(true);
+        if (window.innerWidth <= 768 && !isAlbumSelectMode && e.target.closest('.album-nav-item')) {
+          closeSidebar(true);
+        }
       });
 
-      updatePinState();
-    })();
+      window.addEventListener('resize', () => {
+        setSidebarMode(currentMode);
+      });
 
-    // Điện thoại: mặc định 2 cột ảnh (thay vì 1 ảnh to cả màn hình)
-    if (window.innerWidth <= 768) {
-      sizeSlider.value = 140;
-      document.documentElement.style.setProperty('--thumb-size', '140px');
+      applyWidth(currentWidth);
+      setSidebarMode(currentMode);
     }
+    initSidebarControls();
+
+
+    // Khôi phục cỡ thumbnail đã lưu hoặc mặc định theo màn hình
+    (function initThumbSize() {
+      let savedSize = null;
+      try { savedSize = localStorage.getItem('mv_thumb_size'); } catch (err) {}
+      if (savedSize !== null && savedSize !== '') {
+        applyThumbSize(savedSize, false);
+      } else if (window.innerWidth <= 768) {
+        applyThumbSize(140, false);
+      } else {
+        applyThumbSize(sizeSlider ? sizeSlider.value : 200, false);
+      }
+    })();
 
     // ==========================================
     // LIÊN KẾT THƯ MỤC GỐC (Chrome/Edge trên máy tính) — đọc thẳng file gốc, KHÔNG copy
@@ -4494,8 +6844,7 @@ body.lb-open { overflow: hidden; }
       if (rb) rb.style.display = inTrash ? '' : 'none';
       const dd = document.getElementById('batch-album-dropdown');
       if (dd) dd.style.display = inTrash ? 'none' : '';
-      const lbl = btnBatchDelete.querySelector('span');
-      if (lbl) lbl.textContent = inTrash ? 'Xóa vĩnh viễn' : 'Xóa đã chọn';
+      setBtnLabel(btnBatchDelete, inTrash ? 'Xóa vĩnh viễn' : 'Xóa đã chọn');
     }
 
     async function scanLinkedRoot(opts = {}) {
@@ -4724,15 +7073,20 @@ body.lb-open { overflow: hidden; }
       if (!LINK_SUPPORTED || !linkRoot.handle) { bar.style.display = 'none'; return; }
       const n = rawFiles.filter(f => f.linked).length;
       bar.style.display = 'flex';
-      document.getElementById('link-bar-text').textContent =
-        `🔗 ${linkRoot.name} • ${n} file` + (linkScanning ? ' • đang quét...' : '') + (!linkRoot.granted ? ' • cần cấp quyền đọc thư mục' : '');
+      const statusText = `🔗 ${linkRoot.name} • ${n} file` + (linkScanning ? ' • đang quét...' : '') + (!linkRoot.granted ? ' • cần cấp quyền đọc thư mục' : '');
+      const textEl = document.getElementById('link-bar-text');
+      if (textEl) {
+        textEl.textContent = statusText;
+        textEl.setAttribute('title', statusText);
+        textEl.setAttribute('data-tip', statusText);
+      }
       document.getElementById('link-btn-connect').style.display = linkRoot.granted ? 'none' : '';
       const rescan = document.getElementById('link-btn-rescan');
       rescan.style.display = linkRoot.granted ? '' : 'none';
       rescan.disabled = linkScanning;
       const restore = document.getElementById('link-btn-restore');
       restore.style.display = linkedIgnored.size > 0 ? '' : 'none';
-      restore.textContent = `Hiện lại ${linkedIgnored.size} file đã ẩn`;
+      setBtnLabel(restore, `Hiện lại ${linkedIgnored.size} file đã ẩn`);
     }
 
     async function initLinkedFolder() {
@@ -4801,6 +7155,1711 @@ body.lb-open { overflow: hidden; }
       } catch (err) { /* bỏ qua */ }
     })();
 
+
+    // ===== BƯỚC 1: Tooltip thông minh không tràn màn hình & Menu gập "⋯" trên #main-header =====
+    (function initStep1ToolbarAndTooltips() {
+      // Đảm bảo mọi nút trong DOM đều có data-tip, title và aria-label
+      document.querySelectorAll('button').forEach(btn => {
+        const tip = btn.getAttribute('data-tip') || btn.getAttribute('title') || btn.getAttribute('aria-label') || '';
+        if (tip) {
+          if (!btn.hasAttribute('data-tip')) btn.setAttribute('data-tip', tip);
+          if (!btn.hasAttribute('title')) btn.setAttribute('title', tip);
+          if (!btn.hasAttribute('aria-label')) btn.setAttribute('aria-label', tip);
+        }
+      });
+
+      // Tự động căn chỉnh vị trí tooltip để không bao giờ tràn khỏi khung nhìn
+      function clampTooltipPosition(el) {
+        if (!el) return;
+        const tip = el.getAttribute('data-tip');
+        if (!tip) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return;
+        if (rect.top < 52) {
+          el.setAttribute('data-tip-dir', 'down');
+        } else if (!el.closest('header, .lightbox-header, .album-sidebar')) {
+          el.removeAttribute('data-tip-dir');
+        }
+        const estWidth = Math.min(280, Math.max(60, tip.length * 7.2 + 22));
+        const half = estWidth / 2;
+        const centerX = rect.left + rect.width / 2;
+        const margin = 8;
+        let dx = 0;
+        if (centerX - half < margin) {
+          dx = Math.round(margin - (centerX - half));
+        } else if (centerX + half > window.innerWidth - margin) {
+          dx = Math.round((window.innerWidth - margin) - (centerX + half));
+        }
+        el.style.setProperty('--tip-dx', dx + 'px');
+      }
+
+      document.addEventListener('pointerenter', (e) => {
+        const el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+        if (el) clampTooltipPosition(el);
+      }, true);
+
+      document.addEventListener('mouseover', (e) => {
+        const el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+        if (el) clampTooltipPosition(el);
+      });
+
+      // Xử lý menu "⋯" ở cửa sổ hẹp (< 900px)
+      const moreBtn = document.getElementById('header-more-btn');
+      const moreMenu = document.getElementById('header-more-menu');
+      const moreFullscreen = document.getElementById('more-item-fullscreen');
+      const moreHideHeader = document.getElementById('more-item-hide-header');
+
+      if (moreBtn && moreMenu) {
+        moreBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (openDropdownMenu) openDropdownMenu.classList.remove('show');
+          moreMenu.classList.toggle('show');
+        });
+      }
+      if (openDropdownBtn && moreMenu) {
+        openDropdownBtn.addEventListener('click', () => {
+          moreMenu.classList.remove('show');
+        });
+      }
+      if (moreFullscreen) {
+        moreFullscreen.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (moreMenu) moreMenu.classList.remove('show');
+          toggleFullScreen();
+        });
+      }
+      if (moreHideHeader) {
+        moreHideHeader.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (moreMenu) moreMenu.classList.remove('show');
+          mainHeader.classList.add('hidden-bar');
+        });
+      }
+      window.addEventListener('click', (e) => {
+        if (moreMenu && !e.target.closest('#header-more-dropdown')) {
+          moreMenu.classList.remove('show');
+        }
+        if (openDropdownMenu && !e.target.closest('#open-dropdown-wrap')) {
+          openDropdownMenu.classList.remove('show');
+        }
+      });
+    })();
+
+    // ===== BƯỚC 8: Xem trước ảnh khi rê chuột (Hover Preview) =====
+    const HOVER_PREVIEW_DELAY = 1500;
+    let isHoverPreviewEnabled = true;
+    let closeHoverPreview = null;
+
+    (function initHoverPreview() {
+      const toggleBtn = document.getElementById('hover-preview-toggle');
+      const overlay = document.getElementById('hover-preview');
+      const previewImg = document.getElementById('hover-preview-img');
+      const previewBox = overlay ? overlay.querySelector('.hover-preview-box') : null;
+      if (!overlay || !previewImg) return;
+
+      try {
+        const saved = localStorage.getItem('mv_hover_preview');
+        isHoverPreviewEnabled = (saved !== '0');
+      } catch (err) {
+        isHoverPreviewEnabled = true;
+      }
+
+      function updateToggleBtn() {
+        if (!toggleBtn) return;
+        toggleBtn.classList.toggle('active', isHoverPreviewEnabled);
+        const label = isHoverPreviewEnabled ? 'Xem trước khi rê chuột: Bật' : 'Xem trước khi rê chuột: Tắt';
+        setBtnLabel(toggleBtn, label);
+      }
+
+      updateToggleBtn();
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          isHoverPreviewEnabled = !isHoverPreviewEnabled;
+          try { localStorage.setItem('mv_hover_preview', isHoverPreviewEnabled ? '1' : '0'); } catch (err) {}
+          updateToggleBtn();
+          if (!isHoverPreviewEnabled) closeHoverPreview(true);
+          showToast(`Xem trước khi rê chuột: ${isHoverPreviewEnabled ? 'Bật' : 'Tắt'}`);
+        });
+      }
+
+      let hoverTimer = null;
+      let activeItem = null;
+      let activeCard = null;
+      let loadToken = 0;
+
+      closeHoverPreview = function(immediate = true) {
+        clearTimeout(hoverTimer);
+        hoverTimer = null;
+        loadToken++;
+
+        if (overlay) overlay.classList.remove('show');
+        if (previewImg) {
+          previewImg.classList.remove('loaded');
+          previewImg.removeAttribute('src');
+        }
+        if (previewBox) previewBox.classList.remove('loading');
+
+        if (activeItem) {
+          // Thu hồi URL nếu lightbox không đang xem mục này
+          const inLb = lightbox && lightbox.classList.contains('active') && lbCurrentItem === activeItem;
+          if (!inLb) {
+            dropUrl(activeItem);
+          }
+          activeItem = null;
+        }
+        activeCard = null;
+      };
+
+      function onCardMouseEnter(e) {
+        if (!isHoverPreviewEnabled) return;
+        if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+        if (lightbox && lightbox.classList.contains('active')) return;
+        if (document.body.classList.contains('selecting-mode') || selectedKeys.size > 0) return;
+        if (document.querySelector('.image-card.dragging')) return;
+
+        const card = e.target.closest('.image-card');
+        if (!card) return;
+        const key = card.dataset.key;
+        if (!key) return;
+
+        const item = rawFiles.find(f => f.key === key) || trashFiles.find(f => f.key === key);
+        if (!item || item.type !== 'photo') return; // Video: không áp dụng
+
+        clearTimeout(hoverTimer);
+        activeCard = card;
+
+        hoverTimer = setTimeout(async () => {
+          if (!activeCard || activeCard !== card) return;
+          if (lightbox && lightbox.classList.contains('active')) return;
+          if (document.querySelector('.image-card.dragging')) return;
+
+          activeItem = item;
+          const token = ++loadToken;
+
+          if (previewBox) previewBox.classList.add('loading');
+          if (overlay) overlay.classList.add('show');
+
+          try {
+            const url = await ensureUrl(item);
+            if (token !== loadToken || activeItem !== item) {
+              const inLb = lightbox && lightbox.classList.contains('active') && lbCurrentItem === item;
+              if (!inLb) dropUrl(item);
+              return;
+            }
+            if (url) {
+              previewImg.onload = () => {
+                if (token !== loadToken) return;
+                if (previewBox) previewBox.classList.remove('loading');
+                previewImg.classList.add('loaded');
+              };
+              previewImg.onerror = () => {
+                if (token !== loadToken) return;
+                closeHoverPreview(true);
+              };
+              previewImg.src = url;
+            } else {
+              closeHoverPreview(true);
+            }
+          } catch (err) {
+            closeHoverPreview(true);
+          }
+        }, HOVER_PREVIEW_DELAY);
+      }
+
+      function onCardMouseLeave(e) {
+        clearTimeout(hoverTimer);
+        hoverTimer = null;
+        closeHoverPreview(true);
+      }
+
+      // Ủy quyền sự kiện chuột vào gallery để hỗ trợ render lại và kiểu xem mới
+      const galleryEl = document.getElementById('gallery');
+      if (galleryEl) {
+        galleryEl.addEventListener('mouseover', (e) => {
+          const card = e.target.closest('.image-card');
+          if (card && card !== activeCard) {
+            onCardMouseEnter({ target: card });
+          }
+        });
+        galleryEl.addEventListener('mouseout', (e) => {
+          if (!activeCard) return;
+          const rel = e.relatedTarget ? e.relatedTarget.closest('.image-card') : null;
+          if (rel !== activeCard) {
+            onCardMouseLeave(e);
+          }
+        });
+      }
+
+      // Đóng khi cuộn, nhấn phím, kéo thả hoặc thay đổi kích thước
+      window.addEventListener('scroll', () => closeHoverPreview(true), { passive: true });
+      window.addEventListener('keydown', () => closeHoverPreview(true), { passive: true });
+      window.addEventListener('dragstart', () => closeHoverPreview(true), { passive: true });
+      window.addEventListener('resize', () => closeHoverPreview(true), { passive: true });
+    })();
+
+    // ===== BƯỚC 9: Ba kiểu xem (Grid, List, Gallery) =====
+    let viewMode = 'grid';
+    let gallerySelectedIndex = 0;
+    let galleryStageItem = null;
+
+    function setViewMode(mode) {
+      if (mode !== 'grid' && mode !== 'list' && mode !== 'gallery') mode = 'grid';
+      if (mode !== 'gallery' && galleryStageItem) {
+        dropUrl(galleryStageItem);
+        galleryStageItem = null;
+      }
+      viewMode = mode;
+      document.body.dataset.view = mode;
+      try { localStorage.setItem('mv_view_mode', mode); } catch (err) {}
+
+      const btnGrid = document.getElementById('view-btn-grid');
+      const btnList = document.getElementById('view-btn-list');
+      const btnGallery = document.getElementById('view-btn-gallery');
+      if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+      if (btnList) btnList.classList.toggle('active', mode === 'list');
+      if (btnGallery) btnGallery.classList.toggle('active', mode === 'gallery');
+
+      if (typeof closeHoverPreview === 'function') closeHoverPreview(true);
+      renderGallery();
+    }
+
+    // (a) Kiểu Lưới
+    function renderGridView() {
+      const frag = document.createDocumentFragment();
+      displayedFiles.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'image-card' + (selectedKeys.has(item.key) ? ' selected' : '');
+        card.dataset.key = item.key;
+        card.title = item.name;
+        card.setAttribute('aria-label', item.name);
+        card.draggable = true;
+
+        const ext = esc(item.name.split('.').pop().toUpperCase());
+        const inner = item.thumbUrl
+          ? `<img src="${item.thumbUrl}" alt="${esc(item.name)}" loading="lazy" decoding="async" />`
+          : `<div class="video-placeholder-icon thumb-ph">${PH_SVG[item.type] || PH_SVG.photo}</div>`;
+        const badge = item.type === 'video'
+          ? `<div class="video-badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>${ext}</span></div>`
+          : '';
+
+        card.innerHTML = `
+          <div class="card-select-btn" title="Chọn file" aria-label="Chọn file">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <div class="thumb-wrapper">${inner}${badge}</div>
+        `;
+
+        const selectBtn = card.querySelector('.card-select-btn');
+        selectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSelect(item.key);
+        });
+
+        card.addEventListener('click', (e) => {
+          if (typeof closeHoverPreview === 'function') closeHoverPreview(true);
+          if (isSelectionMode || selectedKeys.size > 0 || e.shiftKey || e.metaKey || e.ctrlKey) {
+            toggleSelect(item.key);
+          } else {
+            openLightbox(idx);
+          }
+        });
+
+        card.addEventListener('dragstart', (e) => {
+          let keysToDrag = [item.key];
+          if (selectedKeys.has(item.key) && selectedKeys.size > 1) {
+            keysToDrag = Array.from(selectedKeys);
+          }
+          e.dataTransfer.setData('application/json', JSON.stringify({ keys: keysToDrag }));
+          e.dataTransfer.effectAllowed = 'move';
+          card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+        });
+
+        cardEls.set(item.key, card);
+        frag.appendChild(card);
+      });
+      gallery.appendChild(frag);
+    }
+
+    // (b) Kiểu Danh sách
+    function renderListView() {
+      const showAlbumCol = (currentAlbumId === 'all');
+      const table = document.createElement('table');
+      table.className = 'list-table';
+
+      const sortType = sortSelect ? sortSelect.value : 'name-asc';
+      function sortIndicator(colName) {
+        if (colName === 'name') return sortType === 'name-asc' ? ' ↑' : (sortType === 'name-desc' ? ' ↓' : '');
+        if (colName === 'type') return sortType === 'type-asc' ? ' ↑' : (sortType === 'type-desc' ? ' ↓' : '');
+        if (colName === 'date') return sortType === 'date-asc' ? ' ↑' : (sortType === 'date-desc' ? ' ↓' : '');
+        if (colName === 'size') return sortType === 'size-asc' ? ' ↑' : (sortType === 'size-desc' ? ' ↓' : '');
+        return '';
+      }
+
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="list-check-cell"></th>
+            <th class="list-thumb-cell"></th>
+            <th class="sortable list-name-cell" data-sort-target="name">Tên file${sortIndicator('name')}</th>
+            <th class="sortable" data-sort-target="type">Loại${sortIndicator('type')}</th>
+            <th class="sortable" data-sort-target="size">Dung lượng${sortIndicator('size')}</th>
+            <th class="sortable" data-sort-target="date">Ngày sửa${sortIndicator('date')}</th>
+            ${showAlbumCol ? '<th>Album</th>' : ''}
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      table.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+          const target = th.dataset.sortTarget;
+          if (target === 'name') {
+            sortSelect.value = (sortSelect.value === 'name-asc') ? 'name-desc' : 'name-asc';
+          } else if (target === 'type') {
+            sortSelect.value = (sortSelect.value === 'type-asc') ? 'type-desc' : 'type-asc';
+          } else if (target === 'date') {
+            sortSelect.value = (sortSelect.value === 'date-desc') ? 'date-asc' : 'date-desc';
+          } else if (target === 'size') {
+            sortSelect.value = (sortSelect.value === 'size-desc') ? 'size-asc' : 'size-desc';
+          }
+          applyFilterAndRender();
+        });
+      });
+
+      const tbody = table.querySelector('tbody');
+      const albumMap = new Map(albums.map(a => [a.id, a.name]));
+
+      displayedFiles.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'list-row' + (selectedKeys.has(item.key) ? ' selected' : '');
+        tr.dataset.key = item.key;
+        tr.draggable = true;
+
+        const ext = esc(item.name.split('.').pop().toUpperCase());
+        const albumName = item.albumId && albumMap.has(item.albumId) ? esc(albumMap.get(item.albumId)) : 'Chưa phân loại';
+
+        const thumbContent = item.thumbUrl
+          ? `<img src="${item.thumbUrl}" alt="" loading="lazy" decoding="async" />`
+          : (PH_SVG[item.type] || PH_SVG.photo);
+
+        tr.innerHTML = `
+          <td class="list-check-cell">
+            <input type="checkbox" class="list-check-box" ${selectedKeys.has(item.key) ? 'checked' : ''} aria-label="Chọn file" />
+          </td>
+          <td class="list-thumb-cell">
+            <div class="list-thumb-wrap thumb-wrapper">${thumbContent}</div>
+          </td>
+          <td class="list-name-cell" title="${esc(item.name)}">${esc(item.name)}</td>
+          <td>${ext}</td>
+          <td>${formatBytes(item.size)}</td>
+          <td>${formatDate(item.lastModified)}</td>
+          ${showAlbumCol ? `<td>${albumName}</td>` : ''}
+        `;
+
+        const cb = tr.querySelector('.list-check-box');
+        cb.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSelect(item.key);
+        });
+
+        tr.addEventListener('click', (e) => {
+          if (e.target === cb) return;
+          if (isSelectionMode || selectedKeys.size > 0 || e.shiftKey || e.metaKey || e.ctrlKey) {
+            toggleSelect(item.key);
+          } else {
+            openLightbox(idx);
+          }
+        });
+
+        tr.addEventListener('dragstart', (e) => {
+          let keysToDrag = [item.key];
+          if (selectedKeys.has(item.key) && selectedKeys.size > 1) {
+            keysToDrag = Array.from(selectedKeys);
+          }
+          e.dataTransfer.setData('application/json', JSON.stringify({ keys: keysToDrag }));
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        cardEls.set(item.key, tr);
+        tbody.appendChild(tr);
+      });
+
+      gallery.appendChild(table);
+    }
+
+    // (c) Kiểu Thư viện
+
+    // (c) Kiểu Thư viện
+    async function renderGalleryView() {
+      if (gallerySelectedIndex >= displayedFiles.length) gallerySelectedIndex = 0;
+      const curItem = displayedFiles[gallerySelectedIndex] || displayedFiles[0];
+
+      const wrap = document.createElement('div');
+      wrap.style.display = 'contents';
+
+      // Phần hiển thị ảnh lớn ở trên
+      const stage = document.createElement('div');
+      stage.className = 'gallery-stage';
+      stage.setAttribute('title', 'Nhấp đúp hoặc bấm Enter để mở toàn màn hình');
+
+      const ext = curItem ? esc(curItem.name.split('.').pop().toUpperCase()) : '';
+      stage.innerHTML = `
+        <div class="gallery-stage-ph">
+          ${PH_SVG[curItem ? curItem.type : 'photo']}
+          <span>Đang tải...</span>
+        </div>
+        <div class="gallery-stage-badge">
+          <span>${ext}</span>
+          <span>${curItem ? formatBytes(curItem.size) : ''}</span>
+        </div>
+      `;
+
+      stage.addEventListener('dblclick', () => openLightbox(gallerySelectedIndex));
+      stage.addEventListener('click', () => openLightbox(gallerySelectedIndex));
+
+      // Dải thumbnail ở dưới
+      const strip = document.createElement('div');
+      strip.className = 'gallery-filmstrip';
+
+      displayedFiles.forEach((item, idx) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'filmstrip-thumb thumb-wrapper' + (idx === gallerySelectedIndex ? ' active' : '') + (selectedKeys.has(item.key) ? ' selected' : '');
+        thumb.dataset.key = item.key;
+        thumb.draggable = true;
+
+        const itemExt = esc(item.name.split('.').pop().toUpperCase());
+        const inner = item.thumbUrl
+          ? `<img src="${item.thumbUrl}" alt="${esc(item.name)}" loading="lazy" decoding="async" />`
+          : (PH_SVG[item.type] || PH_SVG.photo);
+        const badge = item.type === 'video'
+          ? `<div class="video-badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>${itemExt}</span></div>`
+          : '';
+
+        thumb.innerHTML = `${inner}${badge}`;
+
+        thumb.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (idx === gallerySelectedIndex) {
+            openLightbox(idx);
+          } else {
+            gallerySelectedIndex = idx;
+            renderGallery();
+          }
+        });
+
+        thumb.addEventListener('dragstart', (e) => {
+          let keysToDrag = [item.key];
+          if (selectedKeys.has(item.key) && selectedKeys.size > 1) {
+            keysToDrag = Array.from(selectedKeys);
+          }
+          e.dataTransfer.setData('application/json', JSON.stringify({ keys: keysToDrag }));
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        cardEls.set(item.key, thumb);
+        strip.appendChild(thumb);
+      });
+
+      wrap.appendChild(stage);
+      wrap.appendChild(strip);
+      gallery.appendChild(wrap);
+
+      // Tải và hiển thị ảnh lớn duy nhất cho stage (tiết kiệm RAM)
+      if (galleryStageItem && galleryStageItem !== curItem) {
+        dropUrl(galleryStageItem);
+        galleryStageItem = null;
+      }
+
+      if (curItem) {
+        galleryStageItem = curItem;
+        const url = await ensureUrl(curItem);
+        if (galleryStageItem === curItem && url) {
+          const ph = stage.querySelector('.gallery-stage-ph');
+          if (ph) ph.remove();
+
+          if (curItem.type === 'video') {
+            const vid = document.createElement('video');
+            vid.src = url;
+            vid.controls = true;
+            vid.playsInline = true;
+            stage.insertBefore(vid, stage.firstChild);
+          } else {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = curItem.name;
+            stage.insertBefore(img, stage.firstChild);
+          }
+        }
+      }
+
+      // Cuộn thumbnail đang chọn vào giữa dải
+      const activeThumb = strip.querySelector('.filmstrip-thumb.active');
+      if (activeThumb) {
+        activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+
+    // Gán sự kiện cho 3 nút chuyển kiểu xem
+    (function initViewModeControls() {
+      const btnGrid = document.getElementById('view-btn-grid');
+      const btnList = document.getElementById('view-btn-list');
+      const btnGallery = document.getElementById('view-btn-gallery');
+
+      if (btnGrid) btnGrid.addEventListener('click', () => setViewMode('grid'));
+      if (btnList) btnList.addEventListener('click', () => setViewMode('list'));
+      if (btnGallery) btnGallery.addEventListener('click', () => setViewMode('gallery'));
+
+      // Phím mũi tên sang trái/phải ở kiểu gallery khi không mở lightbox
+      window.addEventListener('keydown', (e) => {
+        if (lightbox && lightbox.classList.contains('active')) return;
+        if (viewMode !== 'gallery') return;
+        const tag = e.target ? e.target.tagName : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        if (e.key === 'ArrowRight') {
+          if (gallerySelectedIndex < displayedFiles.length - 1) {
+            gallerySelectedIndex++;
+            renderGallery();
+          }
+        } else if (e.key === 'ArrowLeft') {
+          if (gallerySelectedIndex > 0) {
+            gallerySelectedIndex--;
+            renderGallery();
+          }
+        } else if (e.key === 'Enter') {
+          openLightbox(gallerySelectedIndex);
+        }
+      });
+
+      // Khôi phục kiểu xem đã lưu
+      try {
+        const saved = localStorage.getItem('mv_view_mode');
+        if (saved === 'grid' || saved === 'list' || saved === 'gallery') {
+          viewMode = saved;
+        }
+      } catch (err) {}
+
+      setViewMode(viewMode);
+    })();
+
+    // ===== BƯỚC 10-a: Play Media Mode & Playlist Integration =====
+    function openPlayMedia() {
+      document.body.dataset.appMode = 'playmedia';
+      const pmTab = document.getElementById('btn-play-media-tab');
+      const libTab = document.getElementById('btn-library-tab');
+      if (pmTab) pmTab.classList.add('active');
+      if (libTab) libTab.classList.remove('active');
+      renderPlayMediaView();
+    }
+
+    function closePlayMedia() {
+      if (typeof stopPmPlayback === 'function') stopPmPlayback();
+      clearTimeout(pmUiTimer);
+      document.body.dataset.appMode = 'library';
+      const pmTab = document.getElementById('btn-play-media-tab');
+      const libTab = document.getElementById('btn-library-tab');
+      if (pmTab) pmTab.classList.remove('active');
+      if (libTab) libTab.classList.add('active');
+      applyFilterAndRender();
+    }
+
+    function renderPlayMediaView() {
+      const pmContainer = document.getElementById('playmedia-view');
+      if (!pmContainer) return;
+
+      pmContainer.innerHTML = `
+        <div class="pm-layout" id="pm-layout">
+          <!-- Bảng quản lý playlist (bên trái) -->
+          <div class="pm-playlist-panel" id="pm-playlist-panel">
+            <div class="pm-panel-header">
+              <span>Danh sách phát (${playlists.length})</span>
+              <button id="btn-pm-new-playlist" class="btn icon-only-btn" data-tip="Tạo Playlist mới" title="Tạo Playlist mới" aria-label="Tạo Playlist mới">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <span class="btn-label">Tạo Playlist mới</span>
+              </button>
+            </div>
+            <div class="pm-playlist-list" id="pm-playlist-list"></div>
+          </div>
+
+          <!-- Khu vực sân khấu phát chính ở giữa -->
+          <div class="pm-stage-wrap" id="pm-stage-wrap">
+            <div class="pm-stage" id="pm-stage">
+              <div class="pm-stage-empty" id="pm-stage-empty">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <h3>Chưa có mục nào đang phát</h3>
+                <p>Chọn một playlist bên trái, hoặc bấm "Thêm từ Thư viện" để bắt đầu phát.</p>
+              </div>
+              <img id="pm-stage-img" src="" alt="Play Media" draggable="false" style="display:none;" />
+              <video id="pm-stage-video" playsinline style="display:none;"></video>
+            </div>
+
+            <!-- Thanh điều khiển nổi phía dưới (tự ẩn sau 1500ms) -->
+            <div class="pm-controls-bar" id="pm-controls-bar">
+              <div class="pm-progress-container" id="pm-progress-container">
+                <div class="pm-progress-track">
+                  <div class="pm-progress-fill" id="pm-progress-fill"></div>
+                </div>
+                <div class="pm-time-info">
+                  <span id="pm-time-cur">0:00</span>
+                  <span id="pm-time-title" class="pm-track-title">—</span>
+                  <span id="pm-time-total">0:00</span>
+                </div>
+              </div>
+
+              <div class="pm-buttons-row">
+                <div class="pm-btn-group left">
+                  <button id="pm-btn-shuffle" class="btn icon-only-btn" data-tip="Phát ngẫu nhiên: Tắt" title="Phát ngẫu nhiên: Tắt" aria-label="Phát ngẫu nhiên: Tắt">
+                    <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+                    <span class="btn-label">Ngẫu nhiên</span>
+                  </button>
+                  <button id="pm-btn-repeat" class="btn icon-only-btn" data-tip="Lặp lại: Cả danh sách" title="Lặp lại: Cả danh sách" aria-label="Lặp lại: Cả danh sách">
+                    <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+                    <span class="btn-label">Lặp lại</span>
+                  </button>
+                  <!-- Tốc độ chuyển ảnh -->
+                  <div class="dropdown" id="pm-speed-dropdown">
+                    <button id="pm-speed-btn" class="btn icon-only-btn" data-tip="Thời gian chuyển ảnh" title="Thời gian chuyển ảnh" aria-label="Thời gian chuyển ảnh">
+                      <span id="pm-speed-val" style="font-size:12px;font-weight:700;">3s</span>
+                    </button>
+                    <div id="pm-speed-menu" class="dropdown-menu upward-menu" style="min-width:140px;">
+                      <div class="dropdown-item" data-spd="1000"><span>⚡ Nhanh (1s)</span></div>
+                      <div class="dropdown-item" data-spd="2000"><span>🚀 Vừa (2s)</span></div>
+                      <div class="dropdown-item" data-spd="3000"><span>⏱️ Chuẩn (3s)</span></div>
+                      <div class="dropdown-item" data-spd="5000"><span>🌿 Chậm (5s)</span></div>
+                      <div class="dropdown-item" data-spd="10000"><span>🖼️ Rất chậm (10s)</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="pm-btn-group center">
+                  <button id="pm-btn-prev" class="btn icon-only-btn" data-tip="Mục trước (←)" title="Mục trước (←)" aria-label="Mục trước (←)">
+                    <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                    <span class="btn-label">Trước</span>
+                  </button>
+                  <button id="pm-btn-play" class="btn btn-primary icon-only-btn pm-play-btn" data-tip="Phát/Tạm dừng (Space)" title="Phát/Tạm dừng (Space)" aria-label="Phát/Tạm dừng (Space)">
+                    <svg id="pm-play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <span class="btn-label">Phát</span>
+                  </button>
+                  <button id="pm-btn-next" class="btn icon-only-btn" data-tip="Mục kế (→)" title="Mục kế (→)" aria-label="Mục kế (→)">
+                    <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                    <span class="btn-label">Sau</span>
+                  </button>
+                </div>
+
+                <div class="pm-btn-group right">
+                  <button id="pm-btn-mute" class="btn icon-only-btn" data-tip="Tắt/Bật tiếng video (M)" title="Tắt/Bật tiếng video (M)" aria-label="Tắt/Bật tiếng video (M)">
+                    <svg id="pm-mute-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    <span class="btn-label">Âm lượng</span>
+                  </button>
+                  <button id="pm-btn-fullscreen" class="btn icon-only-btn" data-tip="Toàn màn hình (F)" title="Toàn màn hình (F)" aria-label="Toàn màn hình (F)">
+                    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                    <span class="btn-label">Toàn màn hình</span>
+                  </button>
+                  <button id="pm-btn-toggle-queue" class="btn icon-only-btn active" data-tip="Ẩn/Hiện Hàng đợi" title="Ẩn/Hiện Hàng đợi" aria-label="Ẩn/Hiện Hàng đợi">
+                    <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                    <span class="btn-label">Hàng đợi</span>
+                  </button>
+                  <button id="pm-btn-exit-top" class="btn icon-only-btn" data-tip="Thoát Play Media (Esc)" title="Thoát Play Media (Esc)" aria-label="Thoát Play Media (Esc)">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    <span class="btn-label">Thoát</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hàng đợi phát (Queue) ở cạnh phải -->
+          <div class="pm-queue-panel" id="pm-queue-panel">
+            <div class="pm-panel-header">
+              <span id="pm-queue-title">Hàng đợi (0)</span>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <button id="btn-pm-add-from-lib" class="btn icon-only-btn" data-tip="Thêm từ Thư viện" title="Thêm từ Thư viện" aria-label="Thêm từ Thư viện">
+                  <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                  <span class="btn-label">Thêm từ Thư viện</span>
+                </button>
+                <button id="btn-pm-save-queue" class="btn icon-only-btn" data-tip="Lưu thành Playlist" title="Lưu thành Playlist" aria-label="Lưu thành Playlist">
+                  <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                  <span class="btn-label">Lưu Playlist</span>
+                </button>
+                <button id="btn-pm-clear-queue" class="btn btn-danger icon-only-btn" data-tip="Xóa sạch hàng đợi" title="Xóa sạch hàng đợi" aria-label="Xóa sạch hàng đợi">
+                  <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  <span class="btn-label">Xóa hàng đợi</span>
+                </button>
+              </div>
+            </div>
+            <div class="pm-queue-list" id="pm-queue-list"></div>
+          </div>
+        </div>
+
+        <!-- Hộp thoại chọn thêm từ Thư viện vào queue -->
+        <div id="pm-picker-modal" class="ui-modal-backdrop">
+          <div class="ui-modal pm-picker-box" role="dialog" aria-modal="true">
+            <div class="pm-picker-header">
+              <h3>Thêm file vào Hàng đợi</h3>
+              <button id="pm-picker-close" class="help-close-btn">&times;</button>
+            </div>
+            <div class="pm-picker-toolbar">
+            <div class="pm-picker-toolbar">
+              <input type="text" id="pm-picker-search" class="search-box" placeholder="Tìm tên..." style="flex:1;" />
+              <select id="pm-picker-album" class="select-box" aria-label="Lọc theo album">
+                <option value="all">Tất cả album</option>
+              </select>
+              <button id="pm-picker-add-album" class="btn">Thêm cả album đang xem</button>
+            </div>
+              <button id="pm-picker-cancel" class="btn">Hủy</button>
+              <button id="pm-picker-ok" class="btn btn-primary">Thêm đã chọn (<span id="pm-picker-count">0</span>)</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (typeof attachPlayMediaEvents === 'function') {
+        attachPlayMediaEvents();
+      }
+    }
+
+    function updateBatchPlaylistMenu() {
+      const menu = document.getElementById('batch-playlist-menu');
+      if (!menu) return;
+      menu.innerHTML = '';
+
+      const newItem = document.createElement('div');
+      newItem.className = 'dropdown-item';
+      newItem.innerHTML = '<span>➕ Tạo Playlist mới...</span>';
+      newItem.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        menu.classList.remove('show');
+        const name = await uiPrompt('Nhập tên cho Playlist mới:');
+        if (name && name.trim()) {
+          const itemsToAdd = (currentAlbumId === 'trash' ? trashFiles : rawFiles).filter(f => selectedKeys.has(f.key));
+          await createAndSavePlaylist(name.trim(), itemsToAdd);
+        }
+      });
+      menu.appendChild(newItem);
+
+      if (playlists.length > 0) {
+        const divSep = document.createElement('div');
+        divSep.style.height = '1px';
+        divSep.style.background = 'rgba(255,255,255,0.1)';
+        divSep.style.margin = '4px 0';
+        menu.appendChild(divSep);
+
+        playlists.forEach(pl => {
+          const it = document.createElement('div');
+          it.className = 'dropdown-item';
+          it.innerHTML = `<span>▶ ${esc(pl.name)} (${pl.items ? pl.items.length : 0})</span>`;
+          it.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            menu.classList.remove('show');
+            const itemsToAdd = (currentAlbumId === 'trash' ? trashFiles : rawFiles).filter(f => selectedKeys.has(f.key));
+            await addItemsToPlaylist(pl.id, itemsToAdd);
+          });
+          menu.appendChild(it);
+        });
+      }
+    }
+
+    async function createAndSavePlaylist(name, items) {
+      const pl = {
+        id: 'pl_' + Date.now(),
+        name: name,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        items: items.map(f => ({ key: f.key, name: f.name, size: f.size, lastModified: f.lastModified, type: f.type, path: f.path || '' })),
+        settings: { repeat: 'all', shuffle: false }
+      };
+      await savePlaylistRecord(pl);
+      playlists.push(pl);
+      clearSelection();
+      showToast(`Đã tạo playlist "${pl.name}" với ${pl.items.length} file`);
+    }
+
+    async function addItemsToPlaylist(playlistId, items) {
+      const pl = playlists.find(p => p.id === playlistId);
+      if (!pl) return;
+      if (!pl.items) pl.items = [];
+      const existingKeys = new Set(pl.items.map(i => i.key));
+      let added = 0;
+      for (const f of items) {
+        if (!existingKeys.has(f.key)) {
+          pl.items.push({ key: f.key, name: f.name, size: f.size, lastModified: f.lastModified, type: f.type, path: f.path || '' });
+          existingKeys.add(f.key);
+          added++;
+        }
+      }
+      pl.updatedAt = Date.now();
+      await savePlaylistRecord(pl);
+      clearSelection();
+      showToast(`Đã thêm ${added} file vào playlist "${pl.name}"`);
+    }
+
+    (function initStep10aControls() {
+      document.body.dataset.appMode = 'library';
+
+      const pmTab = document.getElementById('btn-play-media-tab');
+      const libTab = document.getElementById('btn-library-tab');
+      if (pmTab) pmTab.addEventListener('click', openPlayMedia);
+      if (libTab) libTab.addEventListener('click', closePlayMedia);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.body.dataset.appMode === 'playmedia') {
+          closePlayMedia();
+        }
+      });
+
+      const btnBatchPl = document.getElementById('btn-batch-playlist');
+      const menuBatchPl = document.getElementById('batch-playlist-menu');
+      if (btnBatchPl && menuBatchPl) {
+        btnBatchPl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          updateBatchPlaylistMenu();
+          menuBatchPl.classList.toggle('show');
+        });
+      }
+
+      const btnAlbumAddPl = document.getElementById('btn-album-add-playlist');
+      if (btnAlbumAddPl) {
+        btnAlbumAddPl.addEventListener('click', async () => {
+          if (displayedFiles.length === 0) {
+            showToast('Album này hiện chưa có file nào!');
+            return;
+          }
+          const albumName = currentAlbumNameText ? currentAlbumNameText.textContent : 'Album';
+          const name = await uiPrompt('Nhập tên cho Playlist tạo từ album này:', albumName);
+          if (name && name.trim()) {
+            await createAndSavePlaylist(name.trim(), displayedFiles);
+          }
+        });
+      }
+
+      window.addEventListener('click', (e) => {
+        if (menuBatchPl && !e.target.closest('#batch-playlist-dropdown')) {
+          menuBatchPl.classList.remove('show');
+        }
+      });
+    })();
+
+    // ===== BƯỚC 10-c: Quản lý hàng đợi, phát playlist, sắp xếp kéo thả & hộp chọn Thư viện =====
+    let currentPlaylistId = null;
+    let pmQueue = [];
+    let pmQueueIndex = 0;
+    let pmIsPlaying = false;
+    let pmPlaybackItem = null;
+    let pmShuffle = false;
+    let pmRepeat = 'all'; // 'none' | 'all' | 'one'
+    let pmShuffleOrder = [];
+    let pmUiTimer = null;
+    let pmPhotoTimer = null;
+    let pmPhotoProgressTimer = null;
+    let pmPhotoStartTime = 0;
+    let pmQueueDirty = false;
+    let pmKeydownBound = false;
+
+    function attachPlayMediaEvents() {
+      renderPmPlaylistList();
+      renderPmQueueList();
+      initPmControls();
+    }
+
+    // (1) Vẽ danh sách Playlist bên trái
+    function renderPmPlaylistList() {
+      const listEl = document.getElementById('pm-playlist-list');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+
+      const panelHeaderSpan = document.querySelector('#pm-playlist-panel .pm-panel-header span');
+      if (panelHeaderSpan) panelHeaderSpan.textContent = `Danh sách phát (${playlists.length})`;
+
+      const curQueueItem = document.createElement('div');
+      curQueueItem.className = 'pm-playlist-item' + (currentPlaylistId === null ? ' active' : '');
+      curQueueItem.innerHTML = `
+        <div class="pm-pl-left" title="Hàng đợi hiện tại (chưa lưu)">
+          <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+          <span class="pm-pl-name">Hàng đợi hiện tại${currentPlaylistId === null && pmQueueDirty ? ' •' : ''}</span>
+        </div>
+      `;
+      curQueueItem.addEventListener('click', () => {
+        currentPlaylistId = null;
+        updatePmQueueTitle();
+        renderPmPlaylistList();
+      });
+      listEl.appendChild(curQueueItem);
+
+      playlists.forEach(pl => {
+        const item = document.createElement('div');
+        item.className = 'pm-playlist-item' + (currentPlaylistId === pl.id ? ' active' : '');
+        item.dataset.id = pl.id;
+
+        item.innerHTML = `
+          <div class="pm-pl-left" title="${esc(pl.name)}">
+            <svg viewBox="0 0 24 24"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+            <span class="pm-pl-name">${esc(pl.name)}</span>
+            <span style="font-size:11px;color:var(--text-sub);">(${pl.items ? pl.items.length : 0})</span>
+          </div>
+          <div class="pm-pl-actions">
+            <button class="pm-pl-act-btn btn-rename" title="Đổi tên" aria-label="Đổi tên"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            <button class="pm-pl-act-btn btn-dup" title="Nhân bản" aria-label="Nhân bản"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
+            <button class="pm-pl-act-btn btn-del" title="Xóa" aria-label="Xóa"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+          </div>
+        `;
+
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.pm-pl-act-btn')) return;
+          loadPlaylistToQueue(pl.id);
+        });
+
+        item.querySelector('.btn-rename').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const newName = await uiPrompt('Nhập tên mới cho Playlist:', pl.name);
+          if (newName && newName.trim() && newName.trim() !== pl.name) {
+            pl.name = newName.trim();
+            pl.updatedAt = Date.now();
+            await savePlaylistRecord(pl);
+            renderPmPlaylistList();
+            updatePmQueueTitle();
+            showToast(`Đã đổi tên thành "${pl.name}"`);
+          }
+        });
+
+        item.querySelector('.btn-dup').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const dupPl = {
+            id: 'pl_' + Date.now(),
+            name: `${pl.name} (Bản sao)`,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            items: pl.items ? JSON.parse(JSON.stringify(pl.items)) : [],
+            settings: pl.settings ? JSON.parse(JSON.stringify(pl.settings)) : { repeat: 'all', shuffle: false }
+          };
+          await savePlaylistRecord(dupPl);
+          playlists.push(dupPl);
+          renderPmPlaylistList();
+          showToast(`Đã nhân bản "${dupPl.name}"`);
+        });
+
+        item.querySelector('.btn-del').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (await uiConfirm(`Xóa playlist "${pl.name}"?`)) {
+            await deletePlaylistRecord(pl.id);
+            playlists = playlists.filter(p => p.id !== pl.id);
+            if (currentPlaylistId === pl.id) currentPlaylistId = null;
+            renderPmPlaylistList();
+            updatePmQueueTitle();
+            showToast(`Đã xóa playlist "${pl.name}"`);
+          }
+        });
+
+        listEl.appendChild(item);
+      });
+    }
+
+    // (2) Nạp playlist vào hàng đợi queue và kiểm tra mục thiếu
+    function loadPlaylistToQueue(playlistId) {
+      const pl = playlists.find(p => p.id === playlistId);
+      if (!pl) return;
+      currentPlaylistId = pl.id;
+      pmQueueDirty = false;
+
+      let missingCount = 0;
+      pmQueue = (pl.items || []).map(entry => {
+        const resolved = resolvePlaylistItem(entry);
+        if (!resolved) missingCount++;
+        return {
+          entry: entry,
+          resolved: resolved,
+          missing: !resolved
+        };
+      });
+
+      if (missingCount > 0) {
+        showToast(`Có ${missingCount} file trong playlist không tìm thấy (đã đổi tên/di chuyển)`, true);
+      }
+
+      pmQueueIndex = 0;
+      updatePmQueueTitle();
+      renderPmPlaylistList();
+      renderPmQueueList();
+
+      if (pmQueue.length > 0) {
+        playPmIndex(0);
+      }
+    }
+
+    function updatePmQueueTitle() {
+      const titleEl = document.getElementById('pm-queue-title');
+      if (!titleEl) return;
+      const curPl = playlists.find(p => p.id === currentPlaylistId);
+      const name = curPl ? curPl.name : 'Hàng đợi hiện tại';
+      const dot = pmQueueDirty ? ' •' : '';
+      titleEl.textContent = `${name}${dot} (${pmQueue.length})`;
+    }
+
+    // (3) Vẽ danh sách hàng đợi (Queue) bên phải + kéo thả sắp xếp
+    function renderPmQueueList() {
+      const listEl = document.getElementById('pm-queue-list');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      updatePmQueueTitle();
+
+      if (pmQueue.length === 0) {
+        listEl.innerHTML = '<div style="padding:24px 8px;font-size:12px;color:var(--text-sub);text-align:center;">Hàng đợi đang trống.<br>Bấm "Thêm từ Thư viện" ở trên.</div>';
+        return;
+      }
+
+      pmQueue.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'pm-queue-item' + (idx === pmQueueIndex ? ' active' : '') + (item.missing ? ' missing' : '');
+        div.dataset.index = idx;
+        div.draggable = true;
+
+        const f = item.resolved || item.entry;
+        const ext = esc(f.name.split('.').pop().toUpperCase());
+        const thumbInner = item.resolved && item.resolved.thumbUrl
+          ? `<img src="${item.resolved.thumbUrl}" alt="" />`
+          : (PH_SVG[f.type] || PH_SVG.photo);
+
+        div.innerHTML = `
+          <div class="pm-qi-left" title="${esc(f.name)}">
+            <div class="pm-qi-thumb">${thumbInner}</div>
+            <div class="pm-qi-info">
+              <span class="pm-qi-name">${esc(f.name)}</span>
+              <span class="pm-qi-meta">${item.missing ? '<span style="color:var(--danger)">Không tìm thấy</span>' : `${ext} • ${formatBytes(f.size)}`}</span>
+            </div>
+          </div>
+          <button class="pm-qi-remove" title="Gỡ khỏi hàng đợi"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+        `;
+
+        div.addEventListener('click', (e) => {
+          if (e.target.closest('.pm-qi-remove')) return;
+          playPmIndex(idx);
+        });
+
+        div.querySelector('.pm-qi-remove').addEventListener('click', (e) => {
+          e.stopPropagation();
+          removePmQueueItem(idx);
+        });
+
+        // Kéo thả sắp xếp hàng đợi
+        div.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', String(idx));
+          div.classList.add('dragging');
+        });
+
+        div.addEventListener('dragend', () => div.classList.remove('dragging'));
+
+        div.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          div.style.borderTop = '2px solid var(--accent)';
+        });
+
+        div.addEventListener('dragleave', () => {
+          div.style.borderTop = '';
+        });
+
+        div.addEventListener('drop', (e) => {
+          e.preventDefault();
+          div.style.borderTop = '';
+          const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+          if (!isNaN(fromIdx) && fromIdx !== idx) {
+            const moved = pmQueue.splice(fromIdx, 1)[0];
+            pmQueue.splice(idx, 0, moved);
+            pmQueueDirty = true;
+            if (pmQueueIndex === fromIdx) {
+              pmQueueIndex = idx;
+            } else if (fromIdx < pmQueueIndex && idx >= pmQueueIndex) {
+              pmQueueIndex--;
+            } else if (fromIdx > pmQueueIndex && idx <= pmQueueIndex) {
+              pmQueueIndex++;
+            }
+            renderPmQueueList();
+          }
+        });
+
+        listEl.appendChild(div);
+      });
+    }
+
+    function removePmQueueItem(idx) {
+      if (idx < 0 || idx >= pmQueue.length) return;
+      pmQueue.splice(idx, 1);
+      pmQueueDirty = true;
+      if (pmQueueIndex >= pmQueue.length) pmQueueIndex = Math.max(0, pmQueue.length - 1);
+      renderPmQueueList();
+      renderPmPlaylistList();
+      if (pmQueue.length === 0) {
+        stopPmPlayback();
+      } else if (idx === pmQueueIndex) {
+        playPmIndex(pmQueueIndex);
+      }
+    }
+
+    // (4) Phát một mục trong hàng đợi (chỉ giữ blob URL của mục đang phát)
+    async function playPmIndex(idx) {
+      if (pmQueue.length === 0) {
+        stopPmPlayback();
+        return;
+      }
+
+      if (idx < 0 || idx >= pmQueue.length) {
+        if (pmRepeat === 'all') {
+          idx = 0;
+        } else {
+          stopPmPlayback();
+          showToast('Đã phát hết danh sách');
+          return;
+        }
+      }
+
+      pmQueueIndex = idx;
+      renderPmQueueList();
+
+      const item = pmQueue[idx];
+      const stageEmpty = document.getElementById('pm-stage-empty');
+      const stageImg = document.getElementById('pm-stage-img');
+      const stageVid = document.getElementById('pm-stage-video');
+      const timeTitle = document.getElementById('pm-time-title');
+      const timeCur = document.getElementById('pm-time-cur');
+      const timeTot = document.getElementById('pm-time-total');
+      const progFill = document.getElementById('pm-progress-fill');
+
+      // Dọn mục cũ, thu hồi URL
+      if (pmPlaybackItem && pmPlaybackItem !== item.resolved) {
+        dropUrl(pmPlaybackItem);
+        pmPlaybackItem = null;
+      }
+      clearTimeout(pmPhotoTimer);
+      clearInterval(pmPhotoProgressTimer);
+
+      if (!item.resolved) {
+        showToast(`Không tìm thấy "${item.entry.name}", tự động chuyển mục kế...`, true);
+        setTimeout(() => playPmNext(), 1200);
+        return;
+      }
+
+      const f = item.resolved;
+      pmPlaybackItem = f;
+      if (timeTitle) timeTitle.textContent = f.name;
+
+      const url = await ensureUrl(f);
+      if (pmPlaybackItem !== f) {
+        dropUrl(f);
+        return;
+      }
+
+      if (!url) {
+        showToast(`Không thể đọc "${f.name}", tự động chuyển mục kế...`, true);
+        setTimeout(() => playPmNext(), 1200);
+        return;
+      }
+
+      if (stageEmpty) stageEmpty.style.display = 'none';
+
+      if (f.type === 'video') {
+        if (stageImg) stageImg.style.display = 'none';
+        if (stageVid) {
+          stageVid.style.display = 'block';
+          stageVid.src = url;
+          stageVid.loop = (pmRepeat === 'one');
+          stageVid.play().then(() => {
+            setPmPlayState(true);
+          }).catch(() => {});
+        }
+      } else {
+        if (stageVid) {
+          stageVid.pause();
+          stageVid.src = '';
+          stageVid.style.display = 'none';
+        }
+        if (stageImg) {
+          stageImg.style.display = 'block';
+          stageImg.src = url;
+          setPmPlayState(true);
+          startPmPhotoTimer();
+        }
+      }
+    }
+
+    function setPmPlayState(isPlaying) {
+      pmIsPlaying = isPlaying;
+      const playIcon = document.getElementById('pm-play-icon');
+      if (playIcon) {
+        playIcon.innerHTML = isPlaying
+          ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+          : '<path d="M8 5v14l11-7z"/>';
+      }
+    }
+
+    function togglePmPlay() {
+      const f = pmPlaybackItem;
+      const stageVid = document.getElementById('pm-stage-video');
+      if (!f) {
+        if (pmQueue.length > 0) playPmIndex(0);
+        return;
+      }
+
+      if (f.type === 'video' && stageVid) {
+        if (stageVid.paused) {
+          stageVid.play();
+          setPmPlayState(true);
+        } else {
+          stageVid.pause();
+          setPmPlayState(false);
+        }
+      } else {
+        if (pmIsPlaying) {
+          clearTimeout(pmPhotoTimer);
+          clearInterval(pmPhotoProgressTimer);
+          setPmPlayState(false);
+        } else {
+          setPmPlayState(true);
+          startPmPhotoTimer();
+        }
+      }
+    }
+
+    function playPmNext() {
+      if (pmQueue.length === 0) return;
+      if (pmShuffle) {
+        let nextIdx = Math.floor(Math.random() * pmQueue.length);
+        if (pmQueue.length > 1 && nextIdx === pmQueueIndex) {
+          nextIdx = (nextIdx + 1) % pmQueue.length;
+        }
+        playPmIndex(nextIdx);
+      } else {
+        playPmIndex(pmQueueIndex + 1);
+      }
+    }
+
+    function playPmPrev() {
+      if (pmQueue.length === 0) return;
+      playPmIndex(pmQueueIndex - 1 < 0 ? pmQueue.length - 1 : pmQueueIndex - 1);
+    }
+
+    function stopPmPlayback() {
+      clearTimeout(pmPhotoTimer);
+      clearInterval(pmPhotoProgressTimer);
+      if (pmPlaybackItem) {
+        dropUrl(pmPlaybackItem);
+        pmPlaybackItem = null;
+      }
+      const stageVid = document.getElementById('pm-stage-video');
+      if (stageVid) { stageVid.pause(); stageVid.src = ''; stageVid.style.display = 'none'; }
+      const stageImg = document.getElementById('pm-stage-img');
+      if (stageImg) { stageImg.src = ''; stageImg.style.display = 'none'; }
+      const stageEmpty = document.getElementById('pm-stage-empty');
+      if (stageEmpty) stageEmpty.style.display = 'flex';
+      setPmPlayState(false);
+    }
+
+    function startPmPhotoTimer() {
+      clearTimeout(pmPhotoTimer);
+      clearInterval(pmPhotoProgressTimer);
+
+      const duration = slideshowSpeed || 3000;
+      pmPhotoStartTime = Date.now();
+      const progFill = document.getElementById('pm-progress-fill');
+      const timeCur = document.getElementById('pm-time-cur');
+      const timeTot = document.getElementById('pm-time-total');
+
+      if (timeTot) timeTot.textContent = `0:${Math.round(duration / 1000).toString().padStart(2, '0')}`;
+
+      pmPhotoProgressTimer = setInterval(() => {
+        const elapsed = Date.now() - pmPhotoStartTime;
+        const pct = Math.min(100, (elapsed / duration) * 100);
+        if (progFill) progFill.style.width = pct + '%';
+        if (timeCur) timeCur.textContent = `0:${Math.floor(elapsed / 1000).toString().padStart(2, '0')}`;
+      }, 50);
+
+      pmPhotoTimer = setTimeout(() => {
+        clearInterval(pmPhotoProgressTimer);
+        if (pmRepeat === 'one') {
+          playPmIndex(pmQueueIndex);
+        } else {
+          playPmNext();
+        }
+      }, duration);
+    }
+
+    // (5) Khởi tạo các bộ điều khiển, tự ẩn 1500ms, phím tắt
+    function initPmControls() {
+      const stageWrap = document.getElementById('pm-stage-wrap');
+      const controlsBar = document.getElementById('pm-controls-bar');
+      const playBtn = document.getElementById('pm-btn-play');
+      const prevBtn = document.getElementById('pm-btn-prev');
+      const nextBtn = document.getElementById('pm-btn-next');
+      const muteBtn = document.getElementById('pm-btn-mute');
+      const fsBtn = document.getElementById('pm-btn-fullscreen');
+      const queueToggleBtn = document.getElementById('pm-btn-toggle-queue');
+      const queuePanel = document.getElementById('pm-queue-panel');
+      const exitBtn = document.getElementById('pm-btn-exit-top');
+      const shuffleBtn = document.getElementById('pm-btn-shuffle');
+      const repeatBtn = document.getElementById('pm-btn-repeat');
+      const speedBtn = document.getElementById('pm-speed-btn');
+      const speedMenu = document.getElementById('pm-speed-menu');
+      const speedVal = document.getElementById('pm-speed-val');
+      const stageVid = document.getElementById('pm-stage-video');
+      const progTrack = document.getElementById('pm-progress-container');
+
+      function showPmUI() {
+        clearTimeout(pmUiTimer);
+        if (controlsBar) controlsBar.classList.remove('ui-hidden');
+        if (stageWrap) stageWrap.style.cursor = 'default';
+        pmUiTimer = setTimeout(() => {
+          if (controlsBar && !speedMenu?.classList.contains('show')) {
+            controlsBar.classList.add('ui-hidden');
+            if (stageWrap && pmIsPlaying) stageWrap.style.cursor = 'none';
+          }
+        }, 1500);
+      }
+
+      if (stageWrap) {
+        stageWrap.addEventListener('mousemove', showPmUI);
+        stageWrap.addEventListener('click', (e) => {
+          if (e.target.closest('#pm-controls-bar')) return;
+          togglePmPlay();
+        });
+      }
+
+      if (playBtn) playBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePmPlay(); });
+      if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); playPmPrev(); });
+      if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); playPmNext(); });
+      if (exitBtn) exitBtn.addEventListener('click', (e) => { e.stopPropagation(); closePlayMedia(); });
+
+      // Video ended & timeupdate
+      if (stageVid) {
+        stageVid.addEventListener('ended', () => {
+          if (pmRepeat === 'one') {
+            stageVid.currentTime = 0;
+            stageVid.play().catch(() => {});
+          } else {
+            playPmNext();
+          }
+        });
+
+        stageVid.addEventListener('timeupdate', () => {
+          if (!stageVid.duration) return;
+          const pct = (stageVid.currentTime / stageVid.duration) * 100;
+          const progFill = document.getElementById('pm-progress-fill');
+          if (progFill) progFill.style.width = pct + '%';
+          const timeCur = document.getElementById('pm-time-cur');
+          const timeTot = document.getElementById('pm-time-total');
+          if (timeCur) {
+            const m = Math.floor(stageVid.currentTime / 60);
+            const s = Math.floor(stageVid.currentTime % 60);
+            timeCur.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+          }
+          if (timeTot && isFinite(stageVid.duration)) {
+            const dm = Math.floor(stageVid.duration / 60);
+            const ds = Math.floor(stageVid.duration % 60);
+            timeTot.textContent = `${dm}:${ds.toString().padStart(2, '0')}`;
+          }
+        });
+      }
+
+      // Tua video bằng thanh tiến độ
+      if (progTrack) {
+        progTrack.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const rect = progTrack.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const pct = Math.max(0, Math.min(1, clickX / rect.width));
+          if (pmPlaybackItem && pmPlaybackItem.type === 'video' && stageVid && stageVid.duration) {
+            stageVid.currentTime = stageVid.duration * pct;
+          }
+        });
+      }
+
+      // Ngẫu nhiên (Shuffle)
+      if (shuffleBtn) {
+        shuffleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          pmShuffle = !pmShuffle;
+          shuffleBtn.classList.toggle('active', pmShuffle);
+          const tip = pmShuffle ? 'Phát ngẫu nhiên: Bật' : 'Phát ngẫu nhiên: Tắt';
+          setBtnLabel(shuffleBtn, tip);
+          showToast(tip);
+        });
+      }
+
+      // Lặp lại (Repeat: all -> one -> none -> all)
+      if (repeatBtn) {
+        repeatBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (pmRepeat === 'all') pmRepeat = 'one';
+          else if (pmRepeat === 'one') pmRepeat = 'none';
+          else pmRepeat = 'all';
+
+          const repeatTips = {
+            all: 'Lặp lại: Cả danh sách',
+            one: 'Lặp lại: Một mục',
+            none: 'Lặp lại: Tắt'
+          };
+          repeatBtn.classList.toggle('active', pmRepeat !== 'none');
+          setBtnLabel(repeatBtn, repeatTips[pmRepeat]);
+          showToast(repeatTips[pmRepeat]);
+        });
+      }
+
+      // Tắt/bật tiếng (Mute)
+      if (muteBtn && stageVid) {
+        muteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          stageVid.muted = !stageVid.muted;
+          const muteIcon = document.getElementById('pm-mute-icon');
+          if (muteIcon) {
+            muteIcon.innerHTML = stageVid.muted
+              ? '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>'
+              : '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+          }
+        });
+      }
+
+      // Toàn màn hình
+      if (fsBtn) fsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleFullScreen(); });
+
+      // Ẩn/hiện Queue
+      if (queueToggleBtn && queuePanel) {
+        queueToggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          queuePanel.classList.toggle('collapsed');
+          queueToggleBtn.classList.toggle('active', !queuePanel.classList.contains('collapsed'));
+        });
+      }
+
+      // Tốc độ chuyển ảnh slideshow
+      if (speedVal) speedVal.textContent = (slideshowSpeed / 1000) + 's';
+      if (speedBtn && speedMenu) {
+        speedBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          speedMenu.classList.toggle('show');
+        });
+        speedMenu.querySelectorAll('.dropdown-item').forEach(it => {
+          it.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const spd = parseInt(it.dataset.spd, 10);
+            setSlideshowSpeed(spd, true);
+            if (speedVal) speedVal.textContent = (spd / 1000) + 's';
+            speedMenu.classList.remove('show');
+            if (pmPlaybackItem && pmPlaybackItem.type === 'photo' && pmIsPlaying) {
+              startPmPhotoTimer();
+            }
+          });
+        });
+      }
+
+      // Tạo playlist mới bên panel trái
+      const newPlBtn = document.getElementById('btn-pm-new-playlist');
+      if (newPlBtn) {
+        newPlBtn.addEventListener('click', async () => {
+          const name = await uiPrompt('Nhập tên cho Playlist mới:');
+          if (name && name.trim()) {
+            await createAndSavePlaylist(name.trim(), []);
+            renderPmPlaylistList();
+          }
+        });
+      }
+      // Lưu hàng đợi thành playlist
+      const saveQueueBtn = document.getElementById('btn-pm-save-queue');
+      if (saveQueueBtn) {
+        saveQueueBtn.addEventListener('click', async () => {
+          if (pmQueue.length === 0) {
+            showToast('Hàng đợi đang trống!');
+            return;
+          }
+          const items = pmQueue.map(q => q.resolved || q.entry);
+          const openPl = currentPlaylistId ? playlists.find(p => p.id === currentPlaylistId) : null;
+          if (openPl) {
+            openPl.items = items.map(f => ({ key: f.key, name: f.name, size: f.size, lastModified: f.lastModified, type: f.type, path: f.path || '' }));
+            openPl.updatedAt = Date.now();
+            await savePlaylistRecord(openPl);
+            pmQueueDirty = false;
+            renderPmPlaylistList();
+            updatePmQueueTitle();
+            showToast(`Đã cập nhật playlist "${openPl.name}"`);
+          } else {
+            const name = await uiPrompt('Nhập tên để lưu Playlist:', 'Playlist mới');
+            if (name && name.trim()) {
+              await createAndSavePlaylist(name.trim(), items);
+              currentPlaylistId = playlists[playlists.length - 1].id;
+              pmQueueDirty = false;
+              renderPmPlaylistList();
+              updatePmQueueTitle();
+            }
+          }
+        });
+      }
+
+      // Xóa sạch hàng đợi
+      const clearQueueBtn = document.getElementById('btn-pm-clear-queue');
+      if (clearQueueBtn) {
+        clearQueueBtn.addEventListener('click', async () => {
+          if (pmQueue.length === 0) return;
+          if (await uiConfirm('Xóa toàn bộ các mục trong hàng đợi?')) {
+            pmQueue = [];
+            stopPmPlayback();
+            renderPmQueueList();
+            showToast('Đã dọn sạch hàng đợi');
+          }
+        });
+      }
+
+      // Hộp chọn "Thêm từ Thư viện"
+      initPmLibraryPicker();
+
+      // Phím tắt bàn phím riêng cho Play Media (chỉ gắn 1 lần)
+      if (!pmKeydownBound) {
+        pmKeydownBound = true;
+        window.addEventListener('keydown', (e) => {
+          if (document.body.dataset.appMode !== 'playmedia') return;
+        const tag = e.target ? e.target.tagName : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        if (e.key === ' ') {
+          e.preventDefault();
+          togglePmPlay();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          playPmNext();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          playPmPrev();
+        } else if (e.key === 'm' || e.key === 'M') {
+          if (muteBtn) muteBtn.click();
+        } else if (e.key === 'f' || e.key === 'F') {
+          toggleFullScreen();
+        }
+        });
+      }
+    }
+
+    // (6) Hộp chọn thêm file từ Thư viện vào hàng đợi queue
+    function initPmLibraryPicker() {
+      const addBtn = document.getElementById('btn-pm-add-from-lib');
+      const modal = document.getElementById('pm-picker-modal');
+      const closeBtn = document.getElementById('pm-picker-close');
+      const cancelBtn = document.getElementById('pm-picker-cancel');
+      const okBtn = document.getElementById('pm-picker-ok');
+      const searchBox = document.getElementById('pm-picker-search');
+      const albumSelect = document.getElementById('pm-picker-album');
+      const addAlbumBtn = document.getElementById('pm-picker-add-album');
+      const grid = document.getElementById('pm-picker-grid');
+      const countEl = document.getElementById('pm-picker-count');
+      if (!addBtn || !modal) return;
+
+      let pickerSelected = new Set();
+
+      function populateAlbumSelect() {
+        if (!albumSelect) return;
+        albumSelect.innerHTML = '<option value="all">Tất cả album</option><option value="unassigned">Chưa phân loại</option>';
+        albums.forEach(alb => {
+          const opt = document.createElement('option');
+          opt.value = alb.id;
+          opt.textContent = alb.name;
+          albumSelect.appendChild(opt);
+        });
+      }
+
+      function openPicker() {
+        pickerSelected.clear();
+        updatePickerCount();
+        if (searchBox) searchBox.value = '';
+        populateAlbumSelect();
+        renderPickerGrid();
+        modal.classList.add('show');
+      }
+
+      function closePicker() {
+        modal.classList.remove('show');
+      }
+
+      function updatePickerCount() {
+        if (countEl) countEl.textContent = pickerSelected.size;
+      }
+
+      function renderPickerGrid() {
+        if (!grid) return;
+        grid.innerHTML = '';
+        const kw = searchBox ? searchBox.value.trim().toLowerCase() : '';
+        const albChoice = albumSelect ? albumSelect.value : 'all';
+        const list = rawFiles.filter(f => {
+          const matchKw = f.name.toLowerCase().includes(kw);
+          const matchAlb = albChoice === 'all'
+            ? true
+            : (albChoice === 'unassigned' ? isUnassigned(f) : f.albumId === albChoice);
+          return matchKw && matchAlb;
+        });
+
+        list.forEach(f => {
+          const card = document.createElement('div');
+          card.className = 'pm-pick-card' + (pickerSelected.has(f.key) ? ' selected' : '');
+          const thumbInner = f.thumbUrl
+            ? `<img src="${f.thumbUrl}" alt="" loading="lazy" />`
+            : (PH_SVG[f.type] || PH_SVG.photo);
+
+          card.innerHTML = `
+            ${thumbInner}
+            <div class="pm-pick-badge">✓</div>
+          `;
+
+          card.addEventListener('click', () => {
+            if (pickerSelected.has(f.key)) pickerSelected.delete(f.key);
+            else pickerSelected.add(f.key);
+            card.classList.toggle('selected', pickerSelected.has(f.key));
+            updatePickerCount();
+          });
+
+          grid.appendChild(card);
+        });
+      }
+
+      addBtn.addEventListener('click', openPicker);
+      if (closeBtn) closeBtn.addEventListener('click', closePicker);
+      if (cancelBtn) cancelBtn.addEventListener('click', closePicker);
+
+      if (searchBox) {
+        searchBox.addEventListener('input', () => renderPickerGrid());
+      }
+      if (albumSelect) {
+        albumSelect.addEventListener('change', () => renderPickerGrid());
+      }
+
+      if (addAlbumBtn) {
+        addAlbumBtn.addEventListener('click', () => {
+          displayedFiles.forEach(f => pickerSelected.add(f.key));
+          updatePickerCount();
+          renderPickerGrid();
+        });
+      }
+
+      if (okBtn) {
+        okBtn.addEventListener('click', () => {
+          const addedFiles = rawFiles.filter(f => pickerSelected.has(f.key));
+          if (addedFiles.length > 0) {
+            addedFiles.forEach(f => {
+              pmQueue.push({
+                entry: { key: f.key, name: f.name, size: f.size, lastModified: f.lastModified, type: f.type, path: f.path || '' },
+                resolved: f,
+                missing: false
+              });
+            });
+            pmQueueDirty = true;
+            renderPmQueueList();
+            renderPmPlaylistList();
+            showToast(`Đã thêm ${addedFiles.length} file vào hàng đợi`);
+            if (!pmPlaybackItem && pmQueue.length > 0) {
+              playPmIndex(0);
+            }
+          }
+          closePicker();
+        });
+      }
+    }
 </script>
 </body>
 </html>
