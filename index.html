@@ -2506,7 +2506,9 @@ body[data-sidebar-mode="rail"] .sidebar-app-tabs {
 
 .playmedia-view-container {
   flex: 1;
-  min-height: 100%;
+  /* min-height:100% làm khung phát giãn theo video dọc (cao hơn màn hình),
+     đẩy thanh điều khiển ra ngoài. min-height:0 để nó co đúng khung nhìn. */
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -2524,6 +2526,20 @@ body[data-app-mode="playmedia"] #playmedia-view {
   display: flex !important;
 }
 
+/* Khi đang phát: khóa chiều cao khung chính theo khung nhìn, nếu không video
+   dọc (9:16) sẽ kéo cả trang cao ra và đẩy thanh điều khiển xuống dưới màn hình.
+   Chỉ áp ở chế độ playmedia để lưới thư viện vẫn cuộn bình thường. */
+body[data-app-mode="playmedia"] .content-area,
+body[data-app-mode="playmedia"] .app-layout {
+  min-height: 0;
+  max-height: calc(100vh - var(--topbar-height));
+  overflow: hidden;
+}
+
+body[data-app-mode="playmedia"] {
+  overflow: hidden;
+}
+
 /* ===== BƯỚC 10-b: Giao diện Rạp hát Play Media & Hàng đợi Queue ===== */
 .playmedia-view-container {
   position: relative;
@@ -2538,6 +2554,7 @@ body[data-app-mode="playmedia"] #playmedia-view {
   display: flex;
   width: 100%;
   height: 100%;
+  min-height: 0;
   position: relative;
   overflow: hidden;
 }
@@ -2666,6 +2683,7 @@ body[data-app-mode="playmedia"] #playmedia-view {
   background: #000;
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
 }
 
 .pm-stage {
@@ -2675,6 +2693,8 @@ body[data-app-mode="playmedia"] #playmedia-view {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  /* min-height:0 để khung co được dưới kích thước video dọc */
+  min-height: 0;
 }
 
 .pm-stage-empty {
@@ -2729,6 +2749,48 @@ body[data-app-mode="playmedia"] #playmedia-view {
   transform: translateX(-50%) translateY(15px);
   pointer-events: none;
 }
+
+/* Hai cột danh sách phát và hàng đợi nổi lên trên khu phát, tự ẩn cùng thanh
+   điều khiển sau 1,5s để nhường chỗ cho ảnh/video. Rê chuột là hiện lại. */
+.pm-layout .pm-playlist-panel,
+.pm-layout .pm-queue-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 90;
+  background: rgba(14, 14, 18, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+  transition: transform 0.28s ease, opacity 0.28s ease;
+}
+
+.pm-layout .pm-playlist-panel { left: 0; }
+.pm-layout .pm-queue-panel { right: 0; }
+
+.pm-layout.pm-panels-hidden .pm-playlist-panel {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pm-layout.pm-panels-hidden .pm-queue-panel {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Dải mỏng ở hai mép để kéo cột ra khi chúng đang ẩn */
+.pm-edge-strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  z-index: 85;
+}
+
+.pm-edge-strip.left { left: 0; }
+.pm-edge-strip.right { right: 0; }
 
 .pm-progress-container {
   display: flex;
@@ -8506,15 +8568,20 @@ body[data-app-mode="playmedia"] #playmedia-view {
       const stageVid = document.getElementById('pm-stage-video');
       const progTrack = document.getElementById('pm-progress-container');
 
+      const pmLayout = document.getElementById('pm-layout');
+
       function showPmUI() {
         clearTimeout(pmUiTimer);
         if (controlsBar) controlsBar.classList.remove('ui-hidden');
+        if (pmLayout) pmLayout.classList.remove('pm-panels-hidden');
         if (stageWrap) stageWrap.style.cursor = 'default';
         pmUiTimer = setTimeout(() => {
-          if (controlsBar && !speedMenu?.classList.contains('show')) {
-            controlsBar.classList.add('ui-hidden');
-            if (stageWrap && pmIsPlaying) stageWrap.style.cursor = 'none';
-          }
+          if (speedMenu?.classList.contains('show')) return;
+          // Đang rê chuột trong hai cột thì chưa ẩn
+          if (pmLayout && pmLayout.querySelector('.pm-playlist-panel:hover, .pm-queue-panel:hover')) return;
+          if (controlsBar) controlsBar.classList.add('ui-hidden');
+          if (pmLayout) pmLayout.classList.add('pm-panels-hidden');
+          if (stageWrap && pmIsPlaying) stageWrap.style.cursor = 'none';
         }, 1500);
       }
 
@@ -8524,6 +8591,18 @@ body[data-app-mode="playmedia"] #playmedia-view {
           if (e.target.closest('#pm-controls-bar')) return;
           togglePmPlay();
         });
+      }
+
+      // Hai dải mép để kéo cột ra khi đang ẩn, và giữ cột khi chuột ở trong
+      if (pmLayout) {
+        ['left', 'right'].forEach(side => {
+          const strip = document.createElement('div');
+          strip.className = 'pm-edge-strip ' + side;
+          strip.addEventListener('mouseenter', showPmUI);
+          pmLayout.appendChild(strip);
+        });
+        pmLayout.addEventListener('mousemove', showPmUI);
+        pmLayout.addEventListener('touchstart', showPmUI, { passive: true });
       }
 
       if (playBtn) playBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePmPlay(); });
