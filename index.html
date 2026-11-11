@@ -1645,6 +1645,66 @@ html { overflow-x: clip; }
   }
 }
 
+/* Điện thoại: nhãn chữ trên nút làm thanh công cụ tràn và các nhóm đè lên nhau.
+   Bỏ chữ, chỉ còn icon; phần lọc / sắp xếp / kiểu xem chuyển vào menu "⋯". */
+@media (max-width: 640px) {
+  #main-header .btn-label {
+    display: none !important;
+  }
+  #main-header .toolbar-group,
+  #main-header .controls-group {
+    min-width: 0;
+  }
+  #main-header .toolbar-filters {
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  #main-header .search-box {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+  #main-header .search-box:focus {
+    width: auto;
+  }
+  /* Các mục được chuyển vào menu "⋯" */
+  #header-more-menu .more-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+  }
+  #header-more-menu .more-field > span {
+    font-size: 12px;
+    color: var(--text-sub);
+    white-space: nowrap;
+  }
+  #header-more-menu .more-field select.select-box {
+    flex: 1;
+    max-width: none;
+    font-size: 13px;
+  }
+  #header-more-menu .view-mode-group {
+    display: inline-flex;
+    gap: 4px;
+  }
+
+  /* Hàng tên album: nhường chỗ cho tên, nút chỉ còn icon, thanh trượt nhỏ lại */
+  #album-header-bar .btn-label {
+    display: none !important;
+  }
+  #album-header-bar .album-title-group {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  #album-header-bar .album-actions-group {
+    gap: 4px;
+  }
+  .album-size-control input[type="range"] {
+    width: 48px;
+  }
+}
+
 /* ===== BƯỚC 2: Hàng tên album gọn 1 hàng, thanh trượt cỡ thumbnail & nút Xóa Album chỉ đỏ khi hover ===== */
 #album-header-bar {
   display: flex;
@@ -4915,6 +4975,9 @@ body[data-view="gallery"] #gallery {
 
     lbContainer.addEventListener('click', (e) => {
       if (e.target.closest('button') || e.target.closest('input') || e.target.closest('video') || e.target.closest('.help-modal') || e.target.closest('.dropdown-menu')) return;
+      // Sau một cú vuốt, trình duyệt cảm ứng còn sinh thêm click: bỏ qua nó,
+      // nếu không thanh công cụ lại hiện lên ngay sau khi chuyển ảnh.
+      if (Date.now() < swipeGuardUntil) return;
       toggleLightboxUI();
     });
 
@@ -5388,6 +5451,7 @@ body[data-view="gallery"] #gallery {
     let touchStartY = 0;
     let touchStartTime = 0;
     let touchPinchDist = 0;
+    let swipeGuardUntil = 0;
     let initialZoom = 1;
     let touchPanStartX = 0;
     let touchPanStartY = 0;
@@ -5446,12 +5510,14 @@ body[data-view="gallery"] #gallery {
 
         // Chỉ vuốt chuyển ảnh/video khi đang ở kích thước chuẩn (zoomLevel === 1)
         if (zoomLevel === 1 && timeDiff < 500) {
-          // Vuốt ngang đổi bài: sang trái -> next, sang phải -> prev
+          // Vuốt ngang đổi bài: sang trái -> next, sang phải -> prev.
+          // Không gọi showLightboxUI: vuốt xem ảnh thì giữ nguyên màn hình sạch.
           if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+            swipeGuardUntil = Date.now() + 500;
             if (deltaX < 0) {
-              nextItem(true);
+              nextItem();
             } else {
-              prevItem(true);
+              prevItem();
             }
           }
           // Vuốt dọc xuống để đóng trình xem
@@ -5750,11 +5816,76 @@ body[data-view="gallery"] #gallery {
 
 
 
-      hoverStrip.addEventListener('mouseenter', openSidebar);
-      sidebar.addEventListener('mouseenter', openSidebar);
-      sidebar.addEventListener('mouseleave', () => closeSidebar(false));
-      edgeTab?.addEventListener('mouseenter', openSidebar);
-      edgeTab?.addEventListener('click', () => {
+      /* Điện thoại hẹp: chuyển ô lọc, ô sắp xếp và nhóm kiểu xem vào menu "⋯"
+       để thanh công cụ không tràn và đè lên nhau. Trả lại chỗ cũ khi màn hình rộng. */
+    (function initHeaderCompact() {
+      const menu = document.getElementById('header-more-menu');
+      const filters = document.querySelector('#main-header .toolbar-filters');
+      if (!menu || !filters) return;
+      const typeSel = document.getElementById('type-filter');
+      const sortSel = document.getElementById('sort-select');
+      const viewGrp = document.querySelector('#main-header .view-mode-group') ||
+                      document.querySelector('.view-mode-group');
+      const sizeCtl = document.querySelector('.album-size-control');
+      const moved = [];
+      let isCompact = false;
+
+      function wrap(el, label) {
+        const row = document.createElement('div');
+        row.className = 'more-field';
+        const sp = document.createElement('span');
+        sp.textContent = label;
+        row.appendChild(sp);
+        row.appendChild(el);
+        return row;
+      }
+
+      function toCompact() {
+        if (isCompact) return;
+        isCompact = true;
+        [[sizeCtl, 'Cỡ ảnh'], [typeSel, 'Lọc'], [sortSel, 'Sắp xếp'], [viewGrp, 'Kiểu xem']].forEach(([el, label]) => {
+          if (!el) return;
+          moved.push({ el: el, next: el.nextSibling, parent: el.parentNode });
+          menu.insertBefore(wrap(el, label), menu.firstChild);
+        });
+      }
+
+      function toFull() {
+        if (!isCompact) return;
+        isCompact = false;
+        while (moved.length) {
+          const m = moved.pop();
+          const row = m.el.parentNode;
+          m.parent.insertBefore(m.el, m.next);
+          if (row && row.classList.contains('more-field')) row.remove();
+        }
+      }
+
+      function sync() {
+        if (window.innerWidth <= 640) toCompact();
+        else toFull();
+      }
+
+      sync();
+      let t = null;
+      window.addEventListener('resize', () => {
+        clearTimeout(t);
+        t = setTimeout(sync, 150);
+      });
+    })();
+
+    // Chỉ gắn các sự kiện rê chuột trên máy có chuột. Trên cảm ứng, một lần
+      // chạm sinh ra cả mouseenter lẫn click, nên thanh bên vừa mở đã đóng lại.
+      const hasHover = window.matchMedia('(hover: hover)').matches;
+      if (hasHover) {
+        hoverStrip.addEventListener('mouseenter', openSidebar);
+        sidebar.addEventListener('mouseenter', openSidebar);
+        sidebar.addEventListener('mouseleave', () => closeSidebar(false));
+        edgeTab?.addEventListener('mouseenter', openSidebar);
+      }
+      edgeTab?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (sidebar.classList.contains('show')) closeSidebar(true);
         else openSidebar();
       });
