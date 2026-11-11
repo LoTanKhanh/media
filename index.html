@@ -3,6 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0d0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Media">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
   <title>Offline Media Viewer (Photo & Video)</title>
   <style>
     :root {
@@ -1300,6 +1307,39 @@
 .album-manage-bar .btn:disabled { opacity: 0.4; pointer-events: none; }
 #btn-select-albums.active { color: var(--accent); }
 
+
+/* ===== v3: toast, hộp thoại, lightbox cảm ứng, gợi ý cài app ===== */
+.toast { z-index: 30000; white-space: normal; max-width: 90vw; text-align: center; }
+.toast.error { background: rgba(120, 20, 20, 0.96); border-color: rgba(255, 120, 110, 0.6); }
+#lightbox { touch-action: none; overscroll-behavior: none; }
+body.lb-open { overflow: hidden; }
+.lb-error {
+  position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+  text-align: center; color: #fff; padding: 24px; z-index: 20; pointer-events: none;
+  font-size: 15px; line-height: 1.6; white-space: pre-line;
+}
+.ui-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 20000;
+  display: none; align-items: center; justify-content: center; padding: 16px;
+}
+.ui-modal-backdrop.show { display: flex; }
+.ui-modal {
+  background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px;
+  padding: 18px; width: min(420px, 100%); color: var(--text-main); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+#ui-modal-msg { font-size: 15px; line-height: 1.5; white-space: pre-line; margin-bottom: 14px; word-break: break-word; }
+#ui-modal-input {
+  width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--border-color); background: #0d0d0f; color: #fff; font-size: 16px; margin-bottom: 14px;
+}
+.ui-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.install-hint {
+  position: fixed; left: 12px; right: 12px; bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+  z-index: 3000; display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(30, 30, 35, 0.97); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 12px;
+  padding: 12px 14px; color: #fff; font-size: 13px; line-height: 1.45; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+.install-hint button { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 0 4px; }
 </style>
 </head>
 <body>
@@ -1405,6 +1445,13 @@
             <span class="album-name">Tất cả file</span>
           </div>
           <span class="album-badge" id="badge-count-all">0</span>
+        </div>
+        <div class="album-nav-item" id="album-nav-unassigned" data-album-id="unassigned" style="display:none;">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            <span class="album-name">Chưa phân loại</span>
+          </div>
+          <span class="album-badge" id="badge-count-unassigned">0</span>
         </div>
 
       </div>
@@ -1664,6 +1711,8 @@
       </div>
     </div>
 
+    <div id="lb-error" class="lb-error"></div>
+
     <!-- Media Body -->
     <div class="lightbox-body" id="lb-body">
       <button id="lb-prev" class="nav-btn prev" title="Trước (←)">
@@ -1678,6 +1727,17 @@
       <button id="lb-next" class="nav-btn next" title="Sau (→)">
         <svg style="width:26px;height:26px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
       </button>
+    </div>
+  </div>
+
+  <div id="ui-modal" class="ui-modal-backdrop">
+    <div class="ui-modal" role="dialog" aria-modal="true">
+      <div id="ui-modal-msg"></div>
+      <input id="ui-modal-input" type="text" autocomplete="off" style="display:none;" />
+      <div class="ui-modal-actions">
+        <button id="ui-modal-cancel" class="btn">Hủy</button>
+        <button id="ui-modal-ok" class="btn btn-primary">OK</button>
+      </div>
     </div>
   </div>
 
@@ -1748,6 +1808,8 @@
     const customAlbumsList = document.getElementById('custom-albums-list');
     const albumNavAll = document.getElementById('album-nav-all');
     const badgeCountAll = document.getElementById('badge-count-all');
+    const albumNavUnassigned = document.getElementById('album-nav-unassigned');
+    const badgeCountUnassigned = document.getElementById('badge-count-unassigned');
 
     const albumHeaderBar = document.getElementById('album-header-bar');
     const currentAlbumNameText = document.getElementById('current-album-name-text');
@@ -1807,14 +1869,74 @@
     // TOAST NOTIFICATION
     // ==========================================
     let toastTimer = null;
-    function showToast(msg) {
+    function showToast(msg, isError = false) {
       if (!toast) return;
       toast.textContent = msg;
+      toast.classList.toggle('error', !!isError);
       toast.classList.add('show');
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => {
         toast.classList.remove('show');
-      }, 2500);
+      }, isError ? 6000 : 2500);
+    }
+
+    // Escape chuỗi trước khi chèn vào innerHTML (tên file/album có thể chứa " & < >)
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    // Hộp thoại riêng (thay confirm/prompt/alert của trình duyệt)
+    function openModal({ message, withInput = false, value = '', okText = 'OK', showCancel = true }) {
+      return new Promise((resolve) => {
+        const back = document.getElementById('ui-modal');
+        const msg = document.getElementById('ui-modal-msg');
+        const input = document.getElementById('ui-modal-input');
+        const ok = document.getElementById('ui-modal-ok');
+        const cancel = document.getElementById('ui-modal-cancel');
+        msg.textContent = message;
+        input.style.display = withInput ? 'block' : 'none';
+        input.value = value;
+        ok.textContent = okText;
+        cancel.style.display = showCancel ? '' : 'none';
+        back.classList.add('show');
+
+        const finish = (result) => {
+          back.classList.remove('show');
+          back.removeEventListener('keydown', onKey);
+          back.removeEventListener('click', onBack);
+          ok.removeEventListener('click', onOk);
+          cancel.removeEventListener('click', onCancel);
+          resolve(result);
+        };
+        const onOk = () => finish(withInput ? input.value : true);
+        const onCancel = () => finish(withInput ? null : false);
+        const onBack = (e) => { if (e.target === back && showCancel) onCancel(); };
+        const onKey = (e) => {
+          e.stopPropagation(); // không cho phím tắt của trang chạy khi đang gõ trong hộp thoại
+          if (e.key === 'Enter') { e.preventDefault(); onOk(); }
+          else if (e.key === 'Escape') { e.preventDefault(); showCancel ? onCancel() : onOk(); }
+        };
+        back.addEventListener('keydown', onKey);
+        back.addEventListener('click', onBack);
+        ok.addEventListener('click', onOk);
+        cancel.addEventListener('click', onCancel);
+        setTimeout(() => { (withInput ? input : ok).focus(); if (withInput) input.select(); }, 30);
+      });
+    }
+    function uiConfirm(message) { return openModal({ message, okText: 'Đồng ý' }); }
+    function uiPrompt(message, value = '') { return openModal({ message, withInput: true, value, okText: 'Lưu' }); }
+    function uiAlert(message) { return openModal({ message, showCancel: false }); }
+
+    // Xin trình duyệt giữ dữ liệu lâu dài (không tự dọn khi thiếu chỗ)
+    async function requestPersistence() {
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          const already = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+          if (!already) await navigator.storage.persist();
+        }
+      } catch (err) { /* bỏ qua */ }
     }
 
     // ==========================================
@@ -1925,20 +2047,38 @@
     function initDB() {
       return new Promise((resolve) => {
         try {
-          const req = indexedDB.open('MediaViewerDB', 2);
+          const req = indexedDB.open('MediaViewerDB', 3);
           req.onupgradeneeded = (e) => {
             const d = e.target.result;
-            if (!d.objectStoreNames.contains('media')) {
-              d.createObjectStore('media', { keyPath: 'key' });
-            }
-            if (!d.objectStoreNames.contains('albums')) {
-              d.createObjectStore('albums', { keyPath: 'id' });
+            const utx = e.target.transaction;
+            if (!d.objectStoreNames.contains('media')) d.createObjectStore('media', { keyPath: 'key' });
+            if (!d.objectStoreNames.contains('albums')) d.createObjectStore('albums', { keyPath: 'id' });
+            if (!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', { keyPath: 'key' });
+            // Migrate từ v1/v2: tách file gốc (blob) ra store 'blobs', record 'media' chỉ còn metadata
+            if (e.oldVersion > 0 && e.oldVersion < 3) {
+              const media = utx.objectStore('media');
+              const blobs = utx.objectStore('blobs');
+              const cur = media.openCursor();
+              cur.onsuccess = (ev) => {
+                const c = ev.target.result;
+                if (!c) return;
+                const rec = c.value;
+                if (rec && rec.blob) {
+                  blobs.put({ key: rec.key, blob: rec.blob });
+                  const meta = Object.assign({}, rec);
+                  delete meta.blob;
+                  c.update(meta);
+                }
+                c.continue();
+              };
             }
           };
           req.onsuccess = (e) => {
             db = e.target.result;
+            db.onversionchange = () => { try { db.close(); } catch (err) {} db = null; };
             resolve(db);
           };
+          req.onblocked = () => showToast('Hãy đóng các tab Media Viewer khác rồi tải lại trang', true);
           req.onerror = () => resolve(null);
         } catch {
           resolve(null);
@@ -1946,71 +2086,148 @@
       });
     }
 
-        function saveMediaRecordsBatch(records) {
-      if (!db || records.length === 0) return Promise.resolve();
+    // ==========================================
+    // LỚP LƯU TRỮ v3
+    //  - store 'media' : metadata + ảnh thu nhỏ (nhẹ, nạp hết khi mở app)
+    //  - store 'blobs' : file gốc, chỉ đọc khi xem (tiết kiệm RAM)
+    // ==========================================
+    function txDone(tx) {
       return new Promise((resolve) => {
+        tx.oncomplete = () => resolve({ ok: true });
+        tx.onerror = () => resolve({ ok: false, error: tx.error });
+        tx.onabort = () => resolve({ ok: false, error: tx.error });
+      });
+    }
+
+    function describeDbError(err) {
+      const n = err && err.name;
+      if (n === 'QuotaExceededError') return 'hết dung lượng bộ nhớ trình duyệt';
+      if (err && err.message === 'NoDB') return 'trình duyệt không cho lưu trữ (chế độ riêng tư?)';
+      return (err && (err.message || err.name)) || 'lỗi không rõ';
+    }
+
+    function metaOf(item) {
+      const m = {
+        key: item.key, name: item.name, size: item.size, lastModified: item.lastModified,
+        type: item.type, albumId: item.albumId || 'unassigned'
+      };
+      if (item.thumbBlob) m.thumb = item.thumbBlob;
+      if (item.thumbFailed) m.thumbFailed = true;
+      return m;
+    }
+
+    function itemFromMeta(m) {
+      return {
+        key: m.key, name: m.name, size: m.size, lastModified: m.lastModified, type: m.type,
+        albumId: m.albumId || 'unassigned',
+        thumbBlob: m.thumb || null,
+        thumbUrl: m.thumb ? URL.createObjectURL(m.thumb) : null,
+        thumbFailed: !!m.thumbFailed,
+        url: null, _blob: null
+      };
+    }
+
+    function isUnassigned(f) { return !f.albumId || f.albumId === 'unassigned'; }
+
+    // Lưu file mới theo từng nhóm nhỏ; trả về { ok, savedCount, error }
+    async function saveNewItems(items, onProgress) {
+      if (!db) return { ok: false, savedCount: 0, error: new Error('NoDB') };
+      let saved = 0;
+      const CHUNK = 12;
+      for (let i = 0; i < items.length; i += CHUNK) {
+        const part = items.slice(i, i + CHUNK);
         try {
-          const tx = db.transaction('media', 'readwrite');
-          const store = tx.objectStore('media');
-          for (const r of records) {
-            store.put(r);
+          const tx = db.transaction(['media', 'blobs'], 'readwrite');
+          const m = tx.objectStore('media');
+          const b = tx.objectStore('blobs');
+          for (const it of part) {
+            m.put(metaOf(it));
+            b.put({ key: it.key, blob: it._blob });
           }
-          tx.oncomplete = () => resolve();
-          tx.onerror = (err) => {
-            console.warn('Batch save error:', err);
-            resolve();
-          };
+          const r = await txDone(tx);
+          if (!r.ok) return { ok: false, savedCount: saved, error: r.error };
         } catch (err) {
-          console.warn('Transaction error:', err);
-          resolve();
+          return { ok: false, savedCount: saved, error: err };
         }
+        saved += part.length;
+        if (onProgress) onProgress(saved);
+      }
+      return { ok: true, savedCount: saved };
+    }
+
+    // Cập nhật metadata (đổi album, thêm thumbnail...) — KHÔNG đụng tới file gốc
+    async function saveItemsMeta(items) {
+      if (!db || !items || items.length === 0) return { ok: true };
+      try {
+        const tx = db.transaction('media', 'readwrite');
+        const m = tx.objectStore('media');
+        for (const it of items) m.put(metaOf(it));
+        return await txDone(tx);
+      } catch (err) {
+        return { ok: false, error: err };
+      }
+    }
+
+    async function deleteItems(keys) {
+      if (!keys || keys.length === 0) return { ok: true };
+      const set = new Set(keys);
+      rawFiles.forEach(it => { if (set.has(it.key)) it._deleted = true; });
+      if (!db) return { ok: true };
+      try {
+        const tx = db.transaction(['media', 'blobs'], 'readwrite');
+        const m = tx.objectStore('media');
+        const b = tx.objectStore('blobs');
+        keys.forEach(k => { m.delete(k); b.delete(k); });
+        return await txDone(tx);
+      } catch (err) {
+        return { ok: false, error: err };
+      }
+    }
+    function deleteMediaRecord(key) { return deleteItems([key]); }
+    function deleteMediaRecordsBatch(keys) { return deleteItems(keys); }
+
+    async function clearAllFromDB() {
+      rawFiles.forEach(it => { it._deleted = true; });
+      if (!db) return;
+      try {
+        const tx = db.transaction(['media', 'blobs', 'albums'], 'readwrite');
+        tx.objectStore('media').clear();
+        tx.objectStore('blobs').clear();
+        tx.objectStore('albums').clear();
+        await txDone(tx);
+      } catch (err) { /* bỏ qua */ }
+    }
+
+    function loadAllMeta() {
+      if (!db) return Promise.resolve([]);
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('media', 'readonly');
+          const req = tx.objectStore('media').getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } catch { resolve([]); }
       });
     }
 
-    function saveMediaRecord(record) {
+    function getBlob(key) {
+      if (!db) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('blobs', 'readonly');
+          const req = tx.objectStore('blobs').get(key);
+          req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+          req.onerror = () => resolve(null);
+        } catch { resolve(null); }
+      });
+    }
+
+    function saveAlbumRecord(album) {
       if (!db) return Promise.resolve();
       return new Promise((resolve) => {
         try {
-          const tx = db.transaction('media', 'readwrite');
-          tx.objectStore('media').put(record);
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => resolve();
-        } catch { resolve(); }
-      });
-    }
-
-    function deleteMediaRecord(key) {
-      if (!db) return Promise.resolve();
-      return new Promise((resolve) => {
-        try {
-          const tx = db.transaction('media', 'readwrite');
-          tx.objectStore('media').delete(key);
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => resolve();
-        } catch { resolve(); }
-      });
-    }
-
-    function clearAllFromDB() {
-      if (!db) return Promise.resolve();
-      return new Promise((resolve) => {
-        try {
-          const tx = db.transaction(['media', 'albums'], 'readwrite');
-          tx.objectStore('media').clear();
-          tx.objectStore('albums').clear();
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => resolve();
-        } catch { resolve(); }
-      });
-    }
-
-    function deleteMediaRecordsBatch(keys) {
-      if (!db || !keys || keys.length === 0) return Promise.resolve();
-      return new Promise((resolve) => {
-        try {
-          const tx = db.transaction('media', 'readwrite');
-          const store = tx.objectStore('media');
-          keys.forEach(k => store.delete(k));
+          const tx = db.transaction('albums', 'readwrite');
+          tx.objectStore('albums').put(album);
           tx.oncomplete = () => resolve();
           tx.onerror = () => resolve();
         } catch { resolve(); }
@@ -2029,42 +2246,7 @@
         } catch { resolve(); }
       });
     }
-
-    function loadAllFromDB() {
-      if (!db) return Promise.resolve([]);
-      return new Promise((resolve) => {
-        try {
-          const tx = db.transaction('media', 'readonly');
-          const req = tx.objectStore('media').getAll();
-          req.onsuccess = () => resolve(req.result || []);
-          req.onerror = () => resolve([]);
-        } catch { resolve([]); }
-      });
-    }
-
-    function saveAlbumRecord(album) {
-      if (!db) return Promise.resolve();
-      return new Promise((resolve) => {
-        try {
-          const tx = db.transaction('albums', 'readwrite');
-          tx.objectStore('albums').put(album);
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => resolve();
-        } catch { resolve(); }
-      });
-    }
-
-    function deleteAlbumRecord(id) {
-      if (!db) return Promise.resolve();
-      return new Promise((resolve) => {
-        try {
-          const tx = db.transaction('albums', 'readwrite');
-          tx.objectStore('albums').delete(id);
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => resolve();
-        } catch { resolve(); }
-      });
-    }
+    function deleteAlbumRecord(id) { return deleteAlbumRecords([id]); }
 
     function loadAllAlbumsFromDB() {
       if (!db) return Promise.resolve([]);
@@ -2078,30 +2260,184 @@
       });
     }
 
+    // ---- URL file gốc: tạo khi cần xem, thu hồi khi rời đi (tiết kiệm RAM) ----
+    function ensureUrl(item) {
+      if (item.url) return Promise.resolve(item.url);
+      if (!item._urlP) {
+        item._urlP = (async () => {
+          const blob = item._blob || await getBlob(item.key);
+          if (!blob || item._deleted) return null;
+          item.url = URL.createObjectURL(blob);
+          return item.url;
+        })().finally(() => { item._urlP = null; });
+      }
+      return item._urlP;
+    }
+    function dropUrl(item) {
+      if (item && item.url) { URL.revokeObjectURL(item.url); item.url = null; }
+    }
+    function releaseItem(item) {
+      if (!item) return;
+      item._deleted = true;
+      dropUrl(item);
+      if (item.thumbUrl) { URL.revokeObjectURL(item.thumbUrl); item.thumbUrl = null; }
+      item._blob = null;
+    }
+
+    // ==========================================
+    // ẢNH THU NHỎ (thumbnail 360px, tạo 1 lần rồi lưu lại)
+    // ==========================================
+    const THUMB_MAX = 360;
+    const thumbJobs = { photo: [], video: [] };
+    const thumbRunning = { photo: 0, video: 0 };
+    const THUMB_LIMIT = { photo: 3, video: 1 };
+    let thumbDone = 0;
+    let thumbTotal = 0;
+
+    function needsThumb(it) { return !it.thumbBlob && !it.thumbFailed && !it._deleted; }
+
+    function withTimeout(p, ms) {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('timeout')), ms);
+        p.then(v => { clearTimeout(timer); resolve(v); }, e => { clearTimeout(timer); reject(e); });
+      });
+    }
+
+    function waitEvent(el, evName) {
+      return new Promise((resolve, reject) => {
+        el.addEventListener(evName, () => resolve(), { once: true });
+        el.addEventListener('error', () => reject(new Error('media error')), { once: true });
+      });
+    }
+
+    async function drawScaled(src, w, h) {
+      if (!w || !h) return null;
+      const scale = Math.min(1, THUMB_MAX / Math.max(w, h));
+      const cw = Math.max(1, Math.round(w * scale));
+      const ch = Math.max(1, Math.round(h * scale));
+      const c = document.createElement('canvas');
+      c.width = cw; c.height = ch;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#18181b';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(src, 0, 0, cw, ch);
+      const blob = await new Promise(res => c.toBlob(b => res(b), 'image/jpeg', 0.78));
+      c.width = c.height = 0;
+      return blob;
+    }
+
+    async function makeThumb(blob, type) {
+      const url = URL.createObjectURL(blob);
+      try {
+        if (type === 'photo') {
+          const img = new Image();
+          img.decoding = 'async';
+          img.src = url;
+          await withTimeout(img.decode ? img.decode() : waitEvent(img, 'load'), 20000);
+          return await drawScaled(img, img.naturalWidth, img.naturalHeight);
+        }
+        const v = document.createElement('video');
+        v.muted = true;
+        v.playsInline = true;
+        v.setAttribute('playsinline', '');
+        v.preload = 'auto';
+        v.src = url;
+        await withTimeout(waitEvent(v, 'loadedmetadata'), 12000);
+        const target = Math.min(1, (isFinite(v.duration) ? v.duration : 1) / 10);
+        if (target > 0) {
+          v.currentTime = target;
+          await withTimeout(Promise.race([waitEvent(v, 'seeked'), waitEvent(v, 'loadeddata')]), 8000);
+        }
+        const out = await drawScaled(v, v.videoWidth, v.videoHeight);
+        v.removeAttribute('src');
+        v.load();
+        return out;
+      } catch (err) {
+        return null;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    function updateCardThumb(item) {
+      const card = cardEls.get(item.key);
+      if (!card || !item.thumbUrl) return;
+      const wrap = card.querySelector('.thumb-wrapper');
+      if (!wrap) return;
+      const ph = wrap.querySelector('.thumb-ph');
+      const img = document.createElement('img');
+      img.src = item.thumbUrl;
+      img.alt = item.name;
+      img.decoding = 'async';
+      wrap.insertBefore(img, wrap.firstChild);
+      if (ph) ph.remove();
+    }
+
+    async function processThumb(it) {
+      try {
+        if (it._deleted) return;
+        const blob = it._blob || await getBlob(it.key);
+        if (!blob) { it.thumbFailed = true; return; }
+        const th = await makeThumb(blob, it.type);
+        if (it._deleted) return;
+        if (th) {
+          it.thumbBlob = th;
+          it.thumbUrl = URL.createObjectURL(th);
+        } else {
+          it.thumbFailed = true;
+        }
+        if (it._saved !== false) await saveItemsMeta([it]);
+        if (it.thumbUrl && !it._deleted) updateCardThumb(it);
+      } finally {
+        if (it._saved !== false) it._blob = null; // đã nằm trong DB, nhả tham chiếu file
+      }
+    }
+
+    function pumpThumbs() {
+      for (const kind of ['photo', 'video']) {
+        while (thumbRunning[kind] < THUMB_LIMIT[kind] && thumbJobs[kind].length) {
+          const it = thumbJobs[kind].shift();
+          thumbRunning[kind]++;
+          processThumb(it).catch(() => {}).finally(() => {
+            thumbRunning[kind]--;
+            thumbDone++;
+            if (thumbDone >= thumbTotal) {
+              if (thumbTotal >= 5) showToast('Đã tạo xong ảnh thu nhỏ');
+              thumbDone = 0; thumbTotal = 0;
+            } else if (thumbDone % 10 === 0) {
+              showToast(`Đang tạo ảnh thu nhỏ ${thumbDone}/${thumbTotal}...`);
+            }
+            pumpThumbs();
+          });
+        }
+      }
+    }
+
+    function queueThumbs(items) {
+      for (const it of items) {
+        if (!needsThumb(it) || it._queued) continue;
+        it._queued = true;
+        thumbJobs[it.type === 'video' ? 'video' : 'photo'].push(it);
+        thumbTotal++;
+      }
+      pumpThumbs();
+    }
+
     // Auto-load saved media and albums on startup
     window.addEventListener('DOMContentLoaded', async () => {
       await initDB();
-      const [savedMedia, savedAlbums] = await Promise.all([
-        loadAllFromDB(),
+      if (!db) showToast('Không dùng được bộ nhớ trình duyệt (chế độ riêng tư?). File chỉ xem được đến khi đóng trang.', true);
+      requestPersistence();
+      const [savedMeta, savedAlbums] = await Promise.all([
+        loadAllMeta(),
         loadAllAlbumsFromDB()
       ]);
 
       albums = savedAlbums || [];
-
-      if (savedMedia && savedMedia.length > 0) {
-        rawFiles = savedMedia.map(item => ({
-          key: item.key,
-          name: item.name,
-          size: item.size,
-          lastModified: item.lastModified,
-          type: item.type,
-          albumId: item.albumId || 'unassigned',
-          blob: item.blob,
-          url: URL.createObjectURL(item.blob)
-        }));
-      }
+      rawFiles = (savedMeta || []).map(itemFromMeta);
 
       setVideoPlaybackMode(videoPlaybackMode, false);
+      setTimeout(() => queueThumbs(rawFiles.filter(needsThumb)), 600);
       setSlideshowSpeed(slideshowSpeed, false);
       renderAlbumSidebar();
       applyFilterAndRender();
@@ -2118,6 +2454,12 @@
       albumSidebar.classList.toggle('collapsed');
     });
 
+    albumNavUnassigned.addEventListener('click', () => {
+      currentAlbumId = 'unassigned';
+      renderAlbumSidebar();
+      applyFilterAndRender();
+    });
+
     albumNavAll.addEventListener('click', () => {
       currentAlbumId = 'all';
       renderAlbumSidebar();
@@ -2127,7 +2469,7 @@
 
 
     btnCreateAlbum.addEventListener('click', async () => {
-      const name = prompt('Nhập tên Album mới:');
+      const name = await uiPrompt('Nhập tên Album mới:');
       if (name && name.trim()) {
         const newAlbum = {
           id: 'alb_' + Date.now(),
@@ -2146,7 +2488,7 @@
     btnRenameAlbum.addEventListener('click', async () => {
       const currentAlbum = albums.find(a => a.id === currentAlbumId);
       if (!currentAlbum) return;
-      const newName = prompt('Nhập tên mới cho album:', currentAlbum.name);
+      const newName = await uiPrompt('Nhập tên mới cho album:', currentAlbum.name);
       if (newName && newName.trim() && newName.trim() !== currentAlbum.name) {
         currentAlbum.name = newName.trim();
         await saveAlbumRecord(currentAlbum);
@@ -2159,22 +2501,11 @@
     btnDeleteAlbum.addEventListener('click', async () => {
       const currentAlbum = albums.find(a => a.id === currentAlbumId);
       if (!currentAlbum) return;
-      if (confirm(`Bạn có chắc muốn xóa album "${currentAlbum.name}"? Các file trong album vẫn sẽ được giữ lại trong "Tất cả file".`)) {
-        for (const item of rawFiles) {
-          if (item.albumId === currentAlbum.id) {
-            item.albumId = null;
-            await saveMediaRecord({
-              key: item.key,
-              name: item.name,
-              size: item.size,
-              lastModified: item.lastModified,
-              type: item.type,
-              albumId: null,
-              blob: item.blob
-            });
-          }
-        }
-        await deleteAlbumRecord(currentAlbum.id);
+      if (await uiConfirm(`Bạn có chắc muốn xóa album "${currentAlbum.name}"? Các file trong album vẫn sẽ được giữ lại trong "Tất cả file".`)) {
+        const movedFiles = rawFiles.filter(i => i.albumId === currentAlbum.id);
+        movedFiles.forEach(i => { i.albumId = 'unassigned'; });
+        await saveItemsMeta(movedFiles.filter(i => i._saved !== false));
+        await deleteAlbumRecords([currentAlbum.id]);
         albums = albums.filter(a => a.id !== currentAlbum.id);
         currentAlbumId = 'all';
         renderAlbumSidebar();
@@ -2214,6 +2545,10 @@
       const countAll = rawFiles.length;
       badgeCountAll.textContent = countAll;
       albumNavAll.classList.toggle('active', currentAlbumId === 'all');
+      const countUnassigned = rawFiles.filter(isUnassigned).length;
+      badgeCountUnassigned.textContent = countUnassigned;
+      albumNavUnassigned.classList.toggle('active', currentAlbumId === 'unassigned');
+      albumNavUnassigned.style.display = (countUnassigned > 0 || currentAlbumId === 'unassigned') ? '' : 'none';
 
       // Render custom albums
       customAlbumsList.innerHTML = '';
@@ -2226,7 +2561,7 @@
         div.innerHTML = `
           <div class="album-item-left">
             <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-            <span class="album-name" title="${alb.name}">${alb.name}</span>
+            <span class="album-name" title="${esc(alb.name)}">${esc(alb.name)}</span>
           </div>
           <span class="album-badge">${albCount}</span>
         `;
@@ -2319,14 +2654,11 @@
       if (ids.length === 0) return;
       const idSet = new Set(ids);
       const names = albums.filter(a => idSet.has(a.id)).map(a => `"${a.name}"`).join(', ');
-      if (!confirm(`Xóa ${ids.length} album: ${names}?\nCác file trong album vẫn được giữ lại trong "Tất cả file".`)) return;
+      if (!await uiConfirm(`Xóa ${ids.length} album: ${names}?\nCác file trong album vẫn được giữ lại trong "Tất cả file".`)) return;
 
       const moved = rawFiles.filter(f => idSet.has(f.albumId));
-      moved.forEach(f => { f.albumId = null; });
-      await saveMediaRecordsBatch(moved.map(f => ({
-        key: f.key, name: f.name, size: f.size, lastModified: f.lastModified,
-        type: f.type, albumId: null, blob: f.blob
-      })));
+      moved.forEach(f => { f.albumId = 'unassigned'; });
+      await saveItemsMeta(moved.filter(f => f._saved !== false));
       await deleteAlbumRecords(ids);
       albums = albums.filter(a => !idSet.has(a.id));
       if (idSet.has(currentAlbumId)) currentAlbumId = 'all';
@@ -2347,7 +2679,7 @@
       albums.forEach(alb => {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
-        item.innerHTML = `<span>📁 ${alb.name}</span>`;
+        item.innerHTML = `<span>📁 ${esc(alb.name)}</span>`;
         item.addEventListener('click', () => {
           moveMediaToAlbum(Array.from(selectedKeys), alb.id);
           batchAlbumMenu.classList.remove('show');
@@ -2358,22 +2690,16 @@
 
     async function moveMediaToAlbum(keys, targetAlbumId) {
       if (!keys || keys.length === 0) return;
-      let count = 0;
+      const moved = [];
       for (const item of rawFiles) {
         if (keys.includes(item.key)) {
           item.albumId = targetAlbumId;
-          await saveMediaRecord({
-            key: item.key,
-            name: item.name,
-            size: item.size,
-            lastModified: item.lastModified,
-            type: item.type,
-            albumId: targetAlbumId,
-            blob: item.blob
-          });
-          count++;
+          moved.push(item);
         }
       }
+      const r = await saveItemsMeta(moved.filter(i => i._saved !== false));
+      if (!r.ok) showToast('Không lưu được thay đổi album: ' + describeDbError(r.error), true);
+      const count = moved.length;
       clearSelection();
       renderAlbumSidebar();
       applyFilterAndRender();
@@ -2450,13 +2776,10 @@
 
     btnBatchDelete.addEventListener('click', async () => {
       if (selectedKeys.size === 0) return;
-      if (confirm(`Bạn có chắc chắn muốn xóa ${selectedKeys.size} file đã chọn khỏi bộ nhớ web không?`)) {
+      if (await uiConfirm(`Bạn có chắc chắn muốn xóa ${selectedKeys.size} file đã chọn khỏi bộ nhớ web không?`)) {
         const keysToDelete = Array.from(selectedKeys);
-        for (const k of keysToDelete) {
-          await deleteMediaRecord(k);
-          const f = rawFiles.find(item => item.key === k);
-          if (f) URL.revokeObjectURL(f.url);
-        }
+        await deleteItems(keysToDelete);
+        rawFiles.filter(item => selectedKeys.has(item.key)).forEach(releaseItem);
 
         rawFiles = rawFiles.filter(item => !selectedKeys.has(item.key));
         clearSelection();
@@ -2637,9 +2960,9 @@
       if (currentAlbumId === 'all') {
         // Đang ở "Tất cả file": xóa toàn bộ thư viện
         if (rawFiles.length === 0) return;
-        if (confirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh, video và album đã lưu không?')) {
+        if (await uiConfirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh, video và album đã lưu không?')) {
           await clearAllFromDB();
-          rawFiles.forEach(item => URL.revokeObjectURL(item.url));
+          rawFiles.forEach(releaseItem);
           rawFiles = [];
           albums = [];
           displayedFiles = [];
@@ -2656,13 +2979,13 @@
 
       // Đang ở một album: chỉ xóa file của album này, album khác giữ nguyên
       const album = albums.find(a => a.id === currentAlbumId);
-      const targets = rawFiles.filter(f => f.albumId === currentAlbumId);
+      const targets = rawFiles.filter(f => currentAlbumId === 'unassigned' ? isUnassigned(f) : f.albumId === currentAlbumId);
       if (targets.length === 0) { showToast('Album này đang trống'); return; }
-      const albumName = album ? album.name : '';
-      if (!confirm(`Xóa ${targets.length} file trong album "${albumName}"?\nCác album khác không bị ảnh hưởng.`)) return;
+      const albumName = album ? album.name : 'Chưa phân loại';
+      if (!await uiConfirm(`Xóa ${targets.length} file trong album "${albumName}"?\nCác album khác không bị ảnh hưởng.`)) return;
 
       await deleteMediaRecordsBatch(targets.map(f => f.key));
-      targets.forEach(f => URL.revokeObjectURL(f.url));
+      targets.forEach(releaseItem);
       const gone = new Set(targets.map(f => f.key));
       rawFiles = rawFiles.filter(f => !gone.has(f.key));
       clearSelection();
@@ -2680,9 +3003,9 @@
       if (!target) return;
 
       const confirmMsg = target.type === 'video' ? `Xóa video "${target.name}"?` : `Xóa ảnh "${target.name}"?`;
-      if (confirm(confirmMsg)) {
+      if (await uiConfirm(confirmMsg)) {
         await deleteMediaRecord(target.key);
-        URL.revokeObjectURL(target.url);
+        releaseItem(target);
 
         rawFiles = rawFiles.filter(item => item.key !== target.key);
         if (activePlaybackFiles) {
@@ -2888,15 +3211,19 @@
             lastModified: f.lastModified,
             type: type,
             albumId: fileAlbumId,
-            blob: f,
-            url: URL.createObjectURL(f)
+            _blob: f,
+            _saved: false,
+            url: null,
+            thumbBlob: null,
+            thumbUrl: null,
+            thumbFailed: false
           });
           addedCount++;
         }
       }
 
       if (rawFiles.length === 0 && addedCount === 0) {
-        alert('Không tìm thấy file ảnh (JPG, PNG, GIF, WebP) hoặc video (MP4, MOV, WebM) nào!');
+        await uiAlert('Không tìm thấy file ảnh (JPG, PNG, GIF, WebP) hoặc video (MP4, MOV, WebM) nào!');
         return;
       }
 
@@ -2921,18 +3248,18 @@
         showToast(`Đã thêm ${addedCount} file mới. Đang lưu vào bộ nhớ...`);
       }
 
-      // Lưu ngầm toàn bộ dữ liệu vào IndexedDB
-      saveMediaRecordsBatch(newItems.map(item => ({
-        key: item.key,
-        name: item.name,
-        size: item.size,
-        lastModified: item.lastModified,
-        type: item.type,
-        albumId: item.albumId,
-        blob: item.blob
-      }))).then(() => {
-        showToast(`Đã lưu hoàn tất ${rawFiles.length} file vào bộ nhớ trình duyệt`);
+      // Lưu vào IndexedDB theo từng nhóm nhỏ, báo lỗi nếu không lưu được
+      const total = newItems.length;
+      const res = await saveNewItems(newItems, (n) => {
+        if (total >= 24) showToast(`Đang lưu ${n}/${total} file...`);
       });
+      newItems.forEach((it, i) => { if (i < res.savedCount) it._saved = true; });
+      if (res.ok) {
+        showToast(`Đã lưu ${total} file vào bộ nhớ trình duyệt`);
+      } else {
+        showToast(`⚠ Không lưu được: ${describeDbError(res.error)}. Mới lưu ${res.savedCount}/${total} file, phần còn lại chỉ xem được đến khi đóng trang.`, true);
+      }
+      queueThumbs(newItems);
     }
 
     function applyFilterAndRender() {
@@ -2948,7 +3275,7 @@
         if (currentAlbumId === 'all') {
           matchAlbum = true;
         } else {
-          matchAlbum = (item.albumId === currentAlbumId);
+          matchAlbum = (currentAlbumId === 'unassigned') ? isUnassigned(item) : (item.albumId === currentAlbumId);
         }
 
         return matchName && matchType && matchAlbum;
@@ -2970,6 +3297,12 @@
       renderGallery();
     }
 
+    const cardEls = new Map();
+    const PH_SVG = {
+      video: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>',
+      photo: '<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
+    };
+
     function renderGallery() {
       if (displayedFiles.length === 0) {
         emptyState.style.display = 'flex';
@@ -2982,6 +3315,7 @@
       albumHeaderBar.style.display = 'flex';
       gallery.style.display = 'grid';
       gallery.innerHTML = '';
+      cardEls.clear();
 
       const frag = document.createDocumentFragment();
 
@@ -2991,37 +3325,23 @@
         card.dataset.key = item.key;
         card.draggable = true;
 
-        let thumbHtml = '';
-        if (item.type === 'video') {
-          thumbHtml = `
-            <div class="thumb-wrapper">
-              <div class="video-placeholder-icon">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-              </div>
-              <video data-src="${item.url}#t=0.1" preload="none" muted playsinline style="opacity:0;"></video>
-              <div class="video-badge">
-                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                <span>${item.name.split('.').pop().toUpperCase()}</span>
-              </div>
-            </div>
-          `;
-        } else {
-          thumbHtml = `
-            <div class="thumb-wrapper">
-              <img src="${item.url}" alt="${item.name}" loading="lazy" />
-            </div>
-          `;
-        }
+        const ext = esc(item.name.split('.').pop().toUpperCase());
+        const inner = item.thumbUrl
+          ? `<img src="${item.thumbUrl}" alt="${esc(item.name)}" loading="lazy" decoding="async" />`
+          : `<div class="video-placeholder-icon thumb-ph">${PH_SVG[item.type] || PH_SVG.photo}</div>`;
+        const badge = item.type === 'video'
+          ? `<div class="video-badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>${ext}</span></div>`
+          : '';
 
         card.innerHTML = `
           <div class="card-select-btn" title="Chọn file">
             <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
           </div>
-          ${thumbHtml}
+          <div class="thumb-wrapper">${inner}${badge}</div>
           <div class="card-meta">
-            <div class="card-title" title="${item.name}">${item.name}</div>
+            <div class="card-title" title="${esc(item.name)}">${esc(item.name)}</div>
             <div class="card-sub">
-              <span>${item.name.split('.').pop().toUpperCase()}</span>
+              <span>${ext}</span>
               <span>${formatBytes(item.size)}</span>
             </div>
           </div>
@@ -3058,53 +3378,20 @@
           card.classList.remove('dragging');
         });
 
+        cardEls.set(item.key, card);
         frag.appendChild(card);
       });
 
       gallery.appendChild(frag);
-
-      // Lazy load video thumbnails with IntersectionObserver (tối đa 4 video cùng lúc, không gây cạn kiệt bộ giải mã)
-      initVideoObserver();
-      gallery.querySelectorAll('video[data-src]').forEach(v => {
-        videoObserver.observe(v);
-      });
     }
 
-    let videoObserver = null;
-    function initVideoObserver() {
-      if (videoObserver) videoObserver.disconnect();
-      videoObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          const video = entry.target;
-          if (entry.isIntersecting) {
-            if (!video.src && video.dataset.src) {
-              video.src = video.dataset.src;
-              video.preload = 'metadata';
-              video.onloadeddata = () => {
-                video.style.opacity = '1';
-                const icon = video.parentElement ? video.parentElement.querySelector('.video-placeholder-icon') : null;
-                if (icon) icon.style.opacity = '0';
-              };
-            }
-          } else {
-            // Khi cuộn ra khỏi màn hình, giải phóng bộ giải mã video phần cứng
-            if (video.src) {
-              video.pause();
-              video.removeAttribute('src');
-              video.load();
-              video.style.opacity = '0';
-              const icon = video.parentElement ? video.parentElement.querySelector('.video-placeholder-icon') : null;
-              if (icon) icon.style.opacity = '1';
-            }
-          }
-        });
-      }, {
-        rootMargin: '120px 0px',
-        threshold: 0.05
-      });
-    }
+    // Tìm kiếm: chờ người dùng gõ xong mới vẽ lại lưới
+    let searchTimer = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(applyFilterAndRender, 180);
+    });
 
-    searchInput.addEventListener('input', applyFilterAndRender);
     typeFilter.addEventListener('change', applyFilterAndRender);
     sortSelect.addEventListener('change', applyFilterAndRender);
 
@@ -3126,7 +3413,7 @@
       if (!helpModal.classList.contains('active')) {
         uiTimer = setTimeout(() => {
           hideLightboxUI();
-        }, 1000);
+        }, 1500);
       }
     }
 
@@ -3285,6 +3572,7 @@
       resetView();
       updateLightboxMedia();
       lightbox.classList.add('active');
+      document.body.classList.add('lb-open');
       showLightboxUI();
     }
 
@@ -3296,7 +3584,12 @@
       if (lbVideoModeMenu) lbVideoModeMenu.classList.remove('show');
       if (lbSpeedMenu) lbSpeedMenu.classList.remove('show');
       lightbox.classList.remove('active');
+      document.body.classList.remove('lb-open');
       lbBody.classList.remove('hide-cursor');
+      lbToken++;
+      hideLbError();
+      lbImg.removeAttribute('src');
+      if (lbCurrentItem) { dropUrl(lbCurrentItem); lbCurrentItem = null; }
       activePlaybackFiles = null;
     }
 
@@ -3307,10 +3600,23 @@
       lbVideo.src = '';
     }
 
-    function updateLightboxMedia() {
+    let lbToken = 0;
+    let lbCurrentItem = null;
+    const lbErrorEl = document.getElementById('lb-error');
+    function showLbError(msg) { lbErrorEl.textContent = msg; lbErrorEl.style.display = 'flex'; }
+    function hideLbError() { lbErrorEl.style.display = 'none'; }
+    function itemExt(it) { return it ? it.name.split('.').pop().toUpperCase() : ''; }
+
+    async function updateLightboxMedia() {
       const activeList = getActiveMediaList();
       if (activeList.length === 0) return;
       const current = activeList[currentIndex];
+      if (!current) return;
+
+      const token = ++lbToken;
+      const prev = lbCurrentItem;
+      lbCurrentItem = current;
+      hideLbError();
 
       lbTitle.textContent = current.name;
       lbIndex.textContent = `${currentIndex + 1} / ${activeList.length}`;
@@ -3318,31 +3624,55 @@
 
       if (current.type === 'video') {
         lbImg.style.display = 'none';
-        lbImg.src = '';
+        lbImg.removeAttribute('src');
         lbZoomBox.style.display = 'none';
         lbRotate.style.display = 'none';
         lbSlideshowGroup.style.display = 'none';
         lbVideoModeDropdown.style.display = 'inline-block';
-
-        lbVideo.style.display = 'block';
-        lbVideo.src = current.url;
-        lbVideo.loop = (videoPlaybackMode === 'repeat-one');
-        lbVideo.play().catch(() => {});
+        if (!lbVideo.paused) lbVideo.pause();
       } else {
         pauseCurrentVideo();
         lbVideo.style.display = 'none';
         lbVideoModeDropdown.style.display = 'none';
         if (lbVideoModeMenu) lbVideoModeMenu.classList.remove('show');
-
-        lbImg.style.display = 'block';
         lbZoomBox.style.display = 'inline-flex';
         lbRotate.style.display = 'flex';
         lbSlideshowGroup.style.display = 'inline-flex';
-
-        lbImg.src = current.url;
         resetView();
       }
+
+      const url = await ensureUrl(current);
+      if (token !== lbToken) {
+        // người dùng đã chuyển sang file khác trong lúc đang tải
+        if (current !== lbCurrentItem) dropUrl(current);
+        return;
+      }
+      if (!url) {
+        showLbError('Không đọc được file này (có thể đã bị xóa khỏi bộ nhớ).');
+        return;
+      }
+
+      if (current.type === 'video') {
+        lbVideo.style.display = 'block';
+        lbVideo.src = url;
+        lbVideo.loop = (videoPlaybackMode === 'repeat-one');
+        lbVideo.play().catch(() => {});
+      } else {
+        lbImg.style.display = 'block';
+        lbImg.src = url;
+        resetView();
+      }
+      if (prev && prev !== current) dropUrl(prev);
     }
+
+    lbImg.addEventListener('error', () => {
+      if (!lbImg.getAttribute('src') || !lbCurrentItem || lbCurrentItem.type !== 'photo') return;
+      showLbError(`Không hiển thị được ảnh này.\nTrình duyệt trên thiết bị này có thể không hỗ trợ định dạng ${itemExt(lbCurrentItem)}.`);
+    });
+    lbVideo.addEventListener('error', () => {
+      if (!lbVideo.getAttribute('src') || !lbCurrentItem || lbCurrentItem.type !== 'video') return;
+      showLbError(`Không phát được video này.\nThiết bị này có thể không hỗ trợ định dạng ${itemExt(lbCurrentItem)}.\n(iPhone/Safari chỉ phát chắc chắn MP4, MOV, M4V.)`);
+    });
 
     function nextItem(fromUserAction = false) {
       const activeList = getActiveMediaList();
@@ -3462,6 +3792,10 @@
     // ==========================================
     // CỬ CHỈ CẢM ỨNG TOÀN DIỆN (TOUCH, SWIPE & PINCH-ZOOM CHO IPHONE / IPAD)
     // ==========================================
+    let touchIgnore = false;
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(evName => {
+      lightbox.addEventListener(evName, (e) => e.preventDefault());
+    });
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
@@ -3471,6 +3805,11 @@
     let touchPanStartY = 0;
 
     lbBody.addEventListener('touchstart', (e) => {
+      const tgt = e.target;
+      const onVideoBar = lbCurrentItem && lbCurrentItem.type === 'video' &&
+        e.touches[0].clientY > window.innerHeight - 110;
+      touchIgnore = !!(tgt.closest && tgt.closest('button, input, .dropdown-menu, .help-modal')) || onVideoBar;
+      if (touchIgnore) return;
       if (e.touches.length === 2) {
         // Bắt đầu chụm 2 ngón tay thu phóng (Pinch-to-zoom)
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -3489,6 +3828,7 @@
     }, { passive: true });
 
     lbBody.addEventListener('touchmove', (e) => {
+      if (touchIgnore) return;
       if (e.touches.length === 2 && touchPinchDist > 0) {
         // Thu phóng bằng 2 ngón tay
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -3508,6 +3848,7 @@
       if (e.touches.length < 2) {
         touchPinchDist = 0;
       }
+      if (touchIgnore) return;
       if (e.changedTouches.length === 1) {
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
@@ -3540,6 +3881,13 @@
 
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
+      const tg = e.target;
+      if (tg && tg.tagName) {
+        const tag = tg.tagName;
+        const typing = tag === 'TEXTAREA' || tag === 'SELECT' || tg.isContentEditable ||
+          (tag === 'INPUT' && !/^(range|checkbox|radio|button)$/.test(tg.type));
+        if (typing) return;
+      }
       // Toggle sidebar on B key when not in lightbox
       if (!lightbox.classList.contains('active') && (e.key === 'b' || e.key === 'B')) {
         albumSidebar.classList.toggle('collapsed');
@@ -3678,6 +4026,42 @@
       });
 
       updatePinState();
+    })();
+
+    // Điện thoại: mặc định 2 cột ảnh (thay vì 1 ảnh to cả màn hình)
+    if (window.innerWidth <= 768) {
+      sizeSlider.value = 140;
+      document.documentElement.style.setProperty('--thumb-size', '140px');
+    }
+
+    // ===== PWA: Service Worker (mở được khi mất mạng) =====
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+
+    // ===== Gợi ý cài ra Màn hình chính (iPhone/iPad, Safari) =====
+    (function showInstallHint() {
+      try {
+        const ua = navigator.userAgent || '';
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+        if (!isIOS || standalone) return;
+        let dismissed = false;
+        try { dismissed = localStorage.getItem('mv_install_hint') === '1'; } catch (err) {}
+        if (dismissed) return;
+        setTimeout(() => {
+          const box = document.createElement('div');
+          box.className = 'install-hint';
+          box.innerHTML = '<div style="flex:1;">💡 Bấm nút <b>Chia sẻ</b> rồi chọn <b>“Thêm vào Màn hình chính”</b> để dùng như app toàn màn hình. Cách này cũng giúp Safari không tự dọn dữ liệu của app.</div><button aria-label="Đóng">✕</button>';
+          box.querySelector('button').addEventListener('click', () => {
+            box.remove();
+            try { localStorage.setItem('mv_install_hint', '1'); } catch (err) {}
+          });
+          document.body.appendChild(box);
+        }, 3000);
+      } catch (err) { /* bỏ qua */ }
     })();
 
 </script>
