@@ -1340,6 +1340,16 @@ body.lb-open { overflow: hidden; }
   padding: 12px 14px; color: #fff; font-size: 13px; line-height: 1.45; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 .install-hint button { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 0 4px; }
+
+/* ===== Thanh liên kết thư mục ===== */
+.link-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 12px; margin-bottom: 14px; border: 1px solid var(--border-color); border-radius: 10px;
+  background: rgba(10, 132, 255, 0.08); font-size: 13px;
+}
+.link-bar-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.link-bar .btn { padding: 4px 10px; font-size: 12px; }
+.link-bar .btn:disabled { opacity: 0.45; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -1397,6 +1407,10 @@ body.lb-open { overflow: hidden; }
             <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z"/></svg>
             <span>🖼️ Thêm File cụ thể</span>
           </div>
+          <div class="dropdown-item" id="menu-link-root" style="display:none;">
+            <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+            <span>🔗 Liên kết thư mục gốc (không copy)</span>
+          </div>
         </div>
       </div>
 
@@ -1453,6 +1467,13 @@ body.lb-open { overflow: hidden; }
           </div>
           <span class="album-badge" id="badge-count-unassigned">0</span>
         </div>
+        <div class="album-nav-item" id="album-nav-trash" data-album-id="trash" style="display:none;">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span class="album-name">Thùng rác</span>
+          </div>
+          <span class="album-badge" id="badge-count-trash">0</span>
+        </div>
 
       </div>
 
@@ -1479,6 +1500,23 @@ body.lb-open { overflow: hidden; }
 
     <!-- Main Content Area -->
     <main class="content-area">
+      <div id="link-bar" class="link-bar" style="display:none;">
+        <span id="link-bar-text"></span>
+        <span class="link-bar-actions">
+          <button id="link-btn-connect" class="btn btn-primary" style="display:none;">🔓 Kết nối lại</button>
+          <button id="link-btn-rescan" class="btn">🔄 Quét lại</button>
+          <button id="link-btn-restore" class="btn" style="display:none;"></button>
+          <button id="link-btn-unlink" class="btn btn-danger">Gỡ liên kết</button>
+        </span>
+      </div>
+
+      <div id="trash-bar" class="link-bar" style="display:none; background: rgba(255, 69, 58, 0.08);">
+        <span id="trash-bar-text"></span>
+        <span class="link-bar-actions">
+          <button id="trash-btn-restore-all" class="btn btn-primary">♻ Khôi phục tất cả</button>
+        </span>
+      </div>
+
       <!-- Album Banner Bar -->
       <div id="album-header-bar" class="album-header-bar">
         <div class="album-title-group">
@@ -1553,6 +1591,10 @@ body.lb-open { overflow: hidden; }
         </button>
         <div id="batch-album-menu" class="dropdown-menu" style="min-width:200px;"></div>
       </div>
+
+      <button id="btn-batch-restore" class="btn btn-primary" style="display:none;" title="Khôi phục về thư mục cũ">
+        <span>♻ Khôi phục</span>
+      </button>
 
       <button id="btn-batch-delete" class="btn btn-danger" title="Xóa các file đang chọn">
         <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -1749,6 +1791,7 @@ body.lb-open { overflow: hidden; }
 
     // State
     let rawFiles = [];
+    let trashFiles = [];   // file đã chuyển vào thư mục _Đã xóa (chỉ ở chế độ liên kết thư mục)
     let displayedFiles = [];
     let albums = [];
     let currentAlbumId = 'all'; // 'all', 'unassigned', or custom album id
@@ -1810,6 +1853,8 @@ body.lb-open { overflow: hidden; }
     const badgeCountAll = document.getElementById('badge-count-all');
     const albumNavUnassigned = document.getElementById('album-nav-unassigned');
     const badgeCountUnassigned = document.getElementById('badge-count-unassigned');
+    const albumNavTrash = document.getElementById('album-nav-trash');
+    const badgeCountTrash = document.getElementById('badge-count-trash');
 
     const albumHeaderBar = document.getElementById('album-header-bar');
     const currentAlbumNameText = document.getElementById('current-album-name-text');
@@ -1869,15 +1914,17 @@ body.lb-open { overflow: hidden; }
     // TOAST NOTIFICATION
     // ==========================================
     let toastTimer = null;
-    function showToast(msg, isError = false) {
+    function showToast(msg, opt = false) {
       if (!toast) return;
+      const isError = (opt === true);
+      const duration = (typeof opt === 'number') ? opt : (isError ? 6000 : 2500);
       toast.textContent = msg;
-      toast.classList.toggle('error', !!isError);
+      toast.classList.toggle('error', isError);
       toast.classList.add('show');
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => {
         toast.classList.remove('show');
-      }, isError ? 6000 : 2500);
+      }, duration);
     }
 
     // Escape chuỗi trước khi chèn vào innerHTML (tên file/album có thể chứa " & < >)
@@ -2047,13 +2094,14 @@ body.lb-open { overflow: hidden; }
     function initDB() {
       return new Promise((resolve) => {
         try {
-          const req = indexedDB.open('MediaViewerDB', 3);
+          const req = indexedDB.open('MediaViewerDB', 4);
           req.onupgradeneeded = (e) => {
             const d = e.target.result;
             const utx = e.target.transaction;
             if (!d.objectStoreNames.contains('media')) d.createObjectStore('media', { keyPath: 'key' });
             if (!d.objectStoreNames.contains('albums')) d.createObjectStore('albums', { keyPath: 'id' });
             if (!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', { keyPath: 'key' });
+            if (!d.objectStoreNames.contains('handles')) d.createObjectStore('handles', { keyPath: 'key' });
             // Migrate từ v1/v2: tách file gốc (blob) ra store 'blobs', record 'media' chỉ còn metadata
             if (e.oldVersion > 0 && e.oldVersion < 3) {
               const media = utx.objectStore('media');
@@ -2113,6 +2161,8 @@ body.lb-open { overflow: hidden; }
       };
       if (item.thumbBlob) m.thumb = item.thumbBlob;
       if (item.thumbFailed) m.thumbFailed = true;
+      if (item.linked) { m.linked = true; m.path = item.path; }
+      if (item.trashed) { m.trashed = true; m.trashPath = item.trashPath; }
       return m;
     }
 
@@ -2123,6 +2173,8 @@ body.lb-open { overflow: hidden; }
         thumbBlob: m.thumb || null,
         thumbUrl: m.thumb ? URL.createObjectURL(m.thumb) : null,
         thumbFailed: !!m.thumbFailed,
+        linked: !!m.linked, path: m.path || null,
+        trashed: !!m.trashed, trashPath: m.trashPath || null,
         url: null, _blob: null
       };
     }
@@ -2168,10 +2220,12 @@ body.lb-open { overflow: hidden; }
       }
     }
 
-    async function deleteItems(keys) {
+    async function deleteItems(keys, opts = {}) {
       if (!keys || keys.length === 0) return { ok: true };
       const set = new Set(keys);
+      if (!opts.fromScan) addIgnoredPaths(rawFiles.filter(it => set.has(it.key) && it.linked).map(it => it.path));
       rawFiles.forEach(it => { if (set.has(it.key)) it._deleted = true; });
+      trashFiles.forEach(it => { if (set.has(it.key)) it._deleted = true; });
       if (!db) return { ok: true };
       try {
         const tx = db.transaction(['media', 'blobs'], 'readwrite');
@@ -2188,12 +2242,16 @@ body.lb-open { overflow: hidden; }
 
     async function clearAllFromDB() {
       rawFiles.forEach(it => { it._deleted = true; });
+      trashFiles.forEach(it => { it._deleted = true; });
+      linkRoot = { handle: null, name: '', granted: false };
+      linkedIgnored = new Set();
       if (!db) return;
       try {
-        const tx = db.transaction(['media', 'blobs', 'albums'], 'readwrite');
+        const tx = db.transaction(['media', 'blobs', 'albums', 'handles'], 'readwrite');
         tx.objectStore('media').clear();
         tx.objectStore('blobs').clear();
         tx.objectStore('albums').clear();
+        tx.objectStore('handles').clear();
         await txDone(tx);
       } catch (err) { /* bỏ qua */ }
     }
@@ -2265,7 +2323,9 @@ body.lb-open { overflow: hidden; }
       if (item.url) return Promise.resolve(item.url);
       if (!item._urlP) {
         item._urlP = (async () => {
-          const blob = item._blob || await getBlob(item.key);
+          const blob = await getItemBlob(item, true);
+          if (blob === NEEDS_PERM) { item._needsPerm = true; return null; }
+          item._needsPerm = false;
           if (!blob || item._deleted) return null;
           item.url = URL.createObjectURL(blob);
           return item.url;
@@ -2376,7 +2436,8 @@ body.lb-open { overflow: hidden; }
     async function processThumb(it) {
       try {
         if (it._deleted) return;
-        const blob = it._blob || await getBlob(it.key);
+        const blob = await getItemBlob(it, false);
+        if (blob === NEEDS_PERM) { it._queued = false; return; } // chưa có quyền: để lần sau
         if (!blob) { it.thumbFailed = true; return; }
         const th = await makeThumb(blob, it.type);
         if (it._deleted) return;
@@ -2434,10 +2495,13 @@ body.lb-open { overflow: hidden; }
       ]);
 
       albums = savedAlbums || [];
-      rawFiles = (savedMeta || []).map(itemFromMeta);
+      const allSaved = (savedMeta || []).map(itemFromMeta);
+      rawFiles = allSaved.filter(i => !i.trashed);
+      trashFiles = allSaved.filter(i => i.trashed);
 
       setVideoPlaybackMode(videoPlaybackMode, false);
-      setTimeout(() => queueThumbs(rawFiles.filter(needsThumb)), 600);
+      setTimeout(() => queueThumbs(rawFiles.concat(trashFiles).filter(needsThumb)), 600);
+      initLinkedFolder();
       setSlideshowSpeed(slideshowSpeed, false);
       renderAlbumSidebar();
       applyFilterAndRender();
@@ -2456,6 +2520,13 @@ body.lb-open { overflow: hidden; }
 
     albumNavUnassigned.addEventListener('click', () => {
       currentAlbumId = 'unassigned';
+      renderAlbumSidebar();
+      applyFilterAndRender();
+    });
+
+    albumNavTrash.addEventListener('click', () => {
+      clearSelection();
+      currentAlbumId = 'trash';
       renderAlbumSidebar();
       applyFilterAndRender();
     });
@@ -2549,6 +2620,9 @@ body.lb-open { overflow: hidden; }
       badgeCountUnassigned.textContent = countUnassigned;
       albumNavUnassigned.classList.toggle('active', currentAlbumId === 'unassigned');
       albumNavUnassigned.style.display = (countUnassigned > 0 || currentAlbumId === 'unassigned') ? '' : 'none';
+      badgeCountTrash.textContent = trashFiles.length;
+      albumNavTrash.classList.toggle('active', currentAlbumId === 'trash');
+      albumNavTrash.style.display = (linkRoot.handle && (trashFiles.length > 0 || currentAlbumId === 'trash')) ? '' : 'none';
 
       // Render custom albums
       customAlbumsList.innerHTML = '';
@@ -2591,6 +2665,8 @@ body.lb-open { overflow: hidden; }
       const isCustom = albums.some(a => a.id === currentAlbumId);
       if (currentAlbumId === 'unassigned') {
         title = 'Chưa phân loại';
+      } else if (currentAlbumId === 'trash') {
+        title = 'Thùng rác';
       } else if (isCustom) {
         const found = albums.find(a => a.id === currentAlbumId);
         if (found) title = found.name;
@@ -2605,8 +2681,9 @@ body.lb-open { overflow: hidden; }
 
       // Nút "Xóa tất cả": đổi nhãn theo album đang xem
       const clearLabel = btnClearAll.querySelector('span');
-      if (clearLabel) clearLabel.textContent = (currentAlbumId === 'all') ? 'Xóa tất cả' : 'Xóa file trong album';
+      if (clearLabel) clearLabel.textContent = (currentAlbumId === 'all') ? 'Xóa tất cả' : (currentAlbumId === 'trash' ? 'Dọn sạch thùng rác' : 'Xóa file trong album');
       updateAlbumManageBar();
+      updateTrashUI();
     }
 
     function handleAlbumCheckClick(e, id, div) {
@@ -2697,6 +2774,7 @@ body.lb-open { overflow: hidden; }
           moved.push(item);
         }
       }
+      if (moved.length === 0) return;
       const r = await saveItemsMeta(moved.filter(i => i._saved !== false));
       if (!r.ok) showToast('Không lưu được thay đổi album: ' + describeDbError(r.error), true);
       const count = moved.length;
@@ -2765,7 +2843,7 @@ body.lb-open { overflow: hidden; }
     // Phát các file đã chọn
     btnBatchPlay.addEventListener('click', () => {
       if (selectedKeys.size === 0) return;
-      const selectedList = rawFiles.filter(item => selectedKeys.has(item.key));
+      const selectedList = (currentAlbumId === 'trash' ? trashFiles : rawFiles).filter(item => selectedKeys.has(item.key));
       openLightbox(0, selectedList);
     });
 
@@ -2776,17 +2854,32 @@ body.lb-open { overflow: hidden; }
 
     btnBatchDelete.addEventListener('click', async () => {
       if (selectedKeys.size === 0) return;
-      if (await uiConfirm(`Bạn có chắc chắn muốn xóa ${selectedKeys.size} file đã chọn khỏi bộ nhớ web không?`)) {
-        const keysToDelete = Array.from(selectedKeys);
-        await deleteItems(keysToDelete);
-        rawFiles.filter(item => selectedKeys.has(item.key)).forEach(releaseItem);
-
-        rawFiles = rawFiles.filter(item => !selectedKeys.has(item.key));
-        clearSelection();
-        renderAlbumSidebar();
-        applyFilterAndRender();
-        showToast(`Đã xóa ${keysToDelete.length} file`);
+      if (currentAlbumId === 'trash') {
+        await purgeFlow(trashFiles.filter(f => selectedKeys.has(f.key)));
+        return;
       }
+      const items = rawFiles.filter(f => selectedKeys.has(f.key));
+      if (items.length === 0) return;
+      const nLinked = items.filter(f => f.linked).length;
+      const msg = nLinked
+        ? `Chuyển ${nLinked} file vào Thùng rác (thư mục "${TRASH_NAME}" trong thư mục gốc)?\nCó thể khôi phục lại sau.`
+          + (items.length > nLinked ? `\nCòn ${items.length - nLinked} file đã nạp sẽ bị xóa khỏi app.` : '')
+        : `Bạn có chắc chắn muốn xóa ${items.length} file đã chọn khỏi app không?`;
+      if (!await uiConfirm(msg)) return;
+      const gone = await removeItemsSmart(items);
+      clearSelection();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+      if (gone.size > 0) showToast(nLinked ? `Đã xử lý ${gone.size} file (file liên kết nằm trong Thùng rác)` : `Đã xóa ${gone.size} file`);
+    });
+
+    document.getElementById('btn-batch-restore').addEventListener('click', () => {
+      restoreFlow(trashFiles.filter(f => selectedKeys.has(f.key)));
+    });
+    document.getElementById('trash-btn-restore-all').addEventListener('click', async () => {
+      if (trashFiles.length === 0) return;
+      if (!await uiConfirm(`Khôi phục ${trashFiles.length} file về thư mục cũ?`)) return;
+      restoreFlow(trashFiles.slice());
     });
 
     // Phát tất cả trong album hiện tại
@@ -2957,14 +3050,22 @@ body.lb-open { overflow: hidden; }
     });
 
     async function clearAllMedia() {
+      if (currentAlbumId === 'trash') {
+        await purgeFlow(trashFiles.slice());
+        return;
+      }
       if (currentAlbumId === 'all') {
         // Đang ở "Tất cả file": xóa toàn bộ thư viện
         if (rawFiles.length === 0) return;
-        if (await uiConfirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh, video và album đã lưu không?')) {
+        if (await uiConfirm('Bạn có chắc chắn muốn xóa toàn bộ ảnh, video và album đã lưu không?'
+          + (linkRoot.handle ? '\n(Cũng gỡ liên kết thư mục. File gốc trong máy không bị ảnh hưởng.)' : ''))) {
           await clearAllFromDB();
           rawFiles.forEach(releaseItem);
           rawFiles = [];
+          trashFiles.forEach(releaseItem);
+          trashFiles = [];
           albums = [];
+          updateLinkBar();
           displayedFiles = [];
           currentAlbumId = 'all';
           isAlbumSelectMode = false;
@@ -2982,16 +3083,15 @@ body.lb-open { overflow: hidden; }
       const targets = rawFiles.filter(f => currentAlbumId === 'unassigned' ? isUnassigned(f) : f.albumId === currentAlbumId);
       if (targets.length === 0) { showToast('Album này đang trống'); return; }
       const albumName = album ? album.name : 'Chưa phân loại';
-      if (!await uiConfirm(`Xóa ${targets.length} file trong album "${albumName}"?\nCác album khác không bị ảnh hưởng.`)) return;
+      const nLinkedT = targets.filter(f => f.linked).length;
+      if (!await uiConfirm(`Xóa ${targets.length} file trong album "${albumName}"?\nCác album khác không bị ảnh hưởng.`
+        + (nLinkedT ? `\n(${nLinkedT} file trong thư mục sẽ được chuyển vào Thùng rác, có thể khôi phục.)` : ''))) return;
 
-      await deleteMediaRecordsBatch(targets.map(f => f.key));
-      targets.forEach(releaseItem);
-      const gone = new Set(targets.map(f => f.key));
-      rawFiles = rawFiles.filter(f => !gone.has(f.key));
+      const gone = await removeItemsSmart(targets);
       clearSelection();
       renderAlbumSidebar();
       applyFilterAndRender();
-      showToast(`Đã xóa ${targets.length} file trong album "${albumName}"`);
+      if (gone.size > 0) showToast(`Đã xử lý ${gone.size} file trong album "${albumName}"`);
     }
     btnClearAll.addEventListener('click', clearAllMedia);
 
@@ -3002,29 +3102,29 @@ body.lb-open { overflow: hidden; }
       const target = activeList[currentIndex];
       if (!target) return;
 
-      const confirmMsg = target.type === 'video' ? `Xóa video "${target.name}"?` : `Xóa ảnh "${target.name}"?`;
-      if (await uiConfirm(confirmMsg)) {
-        await deleteMediaRecord(target.key);
-        releaseItem(target);
+      const kind = target.type === 'video' ? 'video' : 'ảnh';
+      let confirmMsg;
+      if (target.trashed) confirmMsg = `Xóa vĩnh viễn ${kind} "${target.name}"?\nKhông thể lấy lại.`;
+      else if (target.linked) confirmMsg = `Chuyển ${kind} "${target.name}" vào Thùng rác?\n(Có thể khôi phục lại sau.)`;
+      else confirmMsg = `Xóa ${kind} "${target.name}"?`;
+      if (!await uiConfirm(confirmMsg)) return;
 
-        rawFiles = rawFiles.filter(item => item.key !== target.key);
-        if (activePlaybackFiles) {
-          activePlaybackFiles = activePlaybackFiles.filter(item => item.key !== target.key);
-        }
-        selectedKeys.delete(target.key);
+      let ok;
+      if (target.trashed) ok = (await purgeTrashItems([target])).length > 0;
+      else ok = (await removeItemsSmart([target])).size > 0;
+      if (!ok) return;
 
-        renderAlbumSidebar();
-        applyFilterAndRender();
+      renderAlbumSidebar();
+      applyFilterAndRender();
 
-        const updatedList = getActiveMediaList();
-        if (updatedList.length === 0) {
-          closeLightbox();
-        } else {
-          currentIndex = currentIndex % updatedList.length;
-          updateLightboxMedia();
-        }
-        showToast(`Đã xóa: ${target.name}`);
+      const updatedList = getActiveMediaList();
+      if (updatedList.length === 0) {
+        closeLightbox();
+      } else {
+        currentIndex = currentIndex % updatedList.length;
+        updateLightboxMedia();
       }
+      showToast(target.trashed ? `Đã xóa vĩnh viễn: ${target.name}` : (target.linked ? `Đã chuyển vào Thùng rác: ${target.name}` : `Đã xóa: ${target.name}`));
     }
     lbDeleteCurrent.addEventListener('click', deleteCurrentItem);
 
@@ -3267,12 +3367,13 @@ body.lb-open { overflow: hidden; }
       const sortType = sortSelect.value;
       const typeChoice = typeFilter.value;
 
-      displayedFiles = rawFiles.filter(item => {
+      const pool = (currentAlbumId === 'trash') ? trashFiles : rawFiles;
+      displayedFiles = pool.filter(item => {
         const matchName = item.name.toLowerCase().includes(keyword);
         const matchType = typeChoice === 'all' || item.type === typeChoice;
         
         let matchAlbum = true;
-        if (currentAlbumId === 'all') {
+        if (currentAlbumId === 'all' || currentAlbumId === 'trash') {
           matchAlbum = true;
         } else {
           matchAlbum = (currentAlbumId === 'unassigned') ? isUnassigned(item) : (item.albumId === currentAlbumId);
@@ -3307,7 +3408,7 @@ body.lb-open { overflow: hidden; }
       if (displayedFiles.length === 0) {
         emptyState.style.display = 'flex';
         gallery.style.display = 'none';
-        albumHeaderBar.style.display = (rawFiles.length > 0) ? 'flex' : 'none';
+        albumHeaderBar.style.display = (rawFiles.length > 0 || currentAlbumId === 'trash') ? 'flex' : 'none';
         return;
       }
 
@@ -3648,7 +3749,9 @@ body.lb-open { overflow: hidden; }
         return;
       }
       if (!url) {
-        showLbError('Không đọc được file này (có thể đã bị xóa khỏi bộ nhớ).');
+        if (current._needsPerm) showLbError('Cần cấp quyền đọc thư mục liên kết.\nBấm "Kết nối lại" ở thanh liên kết rồi mở lại file.');
+        else if (current.linked) showLbError('Không mở được file (đã bị xóa hoặc di chuyển khỏi thư mục?).\nĐóng lại và bấm "Quét lại".');
+        else showLbError('Không đọc được file này (có thể đã bị xóa khỏi bộ nhớ).');
         return;
       }
 
@@ -4033,6 +4136,640 @@ body.lb-open { overflow: hidden; }
       sizeSlider.value = 140;
       document.documentElement.style.setProperty('--thumb-size', '140px');
     }
+
+    // ==========================================
+    // LIÊN KẾT THƯ MỤC GỐC (Chrome/Edge trên máy tính) — đọc thẳng file gốc, KHÔNG copy
+    //  - Mỗi thư mục chứa ảnh/video = 1 album (tên theo đường dẫn)
+    //  - Trong DB chỉ lưu metadata + thumbnail, file gốc đọc trực tiếp từ ổ đĩa khi xem
+    // ==========================================
+    const LINK_SUPPORTED = !!window.showDirectoryPicker && !isAppleTouchDevice();
+    const NEEDS_PERM = { needsPermission: true };
+    const LINK_SKIP_DIR = /\.(photoslibrary|app|bundle|lrdata|fcpbundle|imovielibrary)$/i;
+    let linkRoot = { handle: null, name: '', granted: false };
+    let linkedIgnored = new Set();
+    const TRASH_NAME = '_Đã xóa';
+    let linkScanning = false;
+    let fsBusy = 0;
+    let lastLinkScan = 0;
+
+    function putHandleRecord(rec) {
+      if (!db) return Promise.resolve({ ok: false });
+      try {
+        const tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').put(rec);
+        return txDone(tx);
+      } catch (err) { return Promise.resolve({ ok: false, error: err }); }
+    }
+    function getHandleRecord(key) {
+      if (!db) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        try {
+          const req = db.transaction('handles', 'readonly').objectStore('handles').get(key);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch { resolve(null); }
+      });
+    }
+    function deleteHandleRecords(keys) {
+      if (!db) return Promise.resolve();
+      try {
+        const tx = db.transaction('handles', 'readwrite');
+        keys.forEach(k => tx.objectStore('handles').delete(k));
+        return txDone(tx);
+      } catch (err) { return Promise.resolve(); }
+    }
+
+    function addIgnoredPaths(paths) {
+      if (!paths || paths.length === 0) return;
+      paths.forEach(p => linkedIgnored.add(p));
+      putHandleRecord({ key: 'ignored', paths: Array.from(linkedIgnored) });
+      updateLinkBar();
+    }
+
+    async function ensureRootPermission(interactive) {
+      const h = linkRoot.handle;
+      if (!h) return false;
+      try {
+        let st = await h.queryPermission({ mode: 'read' });
+        if (st === 'granted') { linkRoot.granted = true; return true; }
+        if (interactive) {
+          st = await h.requestPermission({ mode: 'read' });
+          linkRoot.granted = (st === 'granted');
+          return linkRoot.granted;
+        }
+      } catch (err) { /* thiếu thao tác người dùng hoặc bị từ chối */ }
+      linkRoot.granted = false;
+      return false;
+    }
+
+    // Lấy File của một item (file liên kết đọc thẳng từ ổ đĩa, file đã nạp thì lấy từ DB)
+    async function getItemBlob(item, interactive) {
+      if (!item.linked) return item._blob || await getBlob(item.key);
+      if (!linkRoot.handle) return null;
+      if (!(await ensureRootPermission(interactive))) return NEEDS_PERM;
+      try {
+        const parts = (item.trashed ? item.trashPath : item.path).split('/');
+        const fname = parts.pop();
+        let dir = linkRoot.handle;
+        for (const p of parts) dir = await dir.getDirectoryHandle(p);
+        const fh = await dir.getFileHandle(fname);
+        return await fh.getFile();
+      } catch (err) {
+        return null;
+      }
+    }
+
+    async function walkLinkedDir(dir, prefix, out) {
+      for await (const h of dir.values()) {
+        const name = h.name;
+        if (!name || name.startsWith('.')) continue;
+        if (h.kind === 'directory') {
+          if (LINK_SKIP_DIR.test(name) || (!prefix && name === TRASH_NAME)) continue;
+          await walkLinkedDir(h, prefix ? `${prefix}/${name}` : name, out);
+        } else {
+          const type = detectMediaType(name);
+          if (!type) continue;
+          out.push({ path: prefix ? `${prefix}/${name}` : name, dir: prefix, name, type, handle: h });
+          if (out.length % 250 === 0) showToast(`Đang quét thư mục... ${out.length} file`);
+        }
+      }
+    }
+
+
+    // ---------- Thùng rác: ghi vào thư mục gốc (cần quyền ghi, chỉ xin khi xóa lần đầu) ----------
+    async function ensureWritePermission() {
+      const h = linkRoot.handle;
+      if (!h) return false;
+      try {
+        let st = await h.queryPermission({ mode: 'readwrite' });
+        if (st === 'granted') return true;
+        st = await h.requestPermission({ mode: 'readwrite' });
+        return st === 'granted';
+      } catch (err) { return false; }
+    }
+
+    async function getDirByPath(root, parts, create) {
+      let d = root;
+      for (const p of parts) d = await d.getDirectoryHandle(p, { create: !!create });
+      return d;
+    }
+
+    async function fsExists(path) {
+      const parts = path.split('/');
+      const name = parts.pop();
+      let dir;
+      try { dir = await getDirByPath(linkRoot.handle, parts, false); } catch { return false; }
+      try { await dir.getFileHandle(name); return true; } catch (e) { return e && e.name === 'TypeMismatchError'; }
+    }
+
+    async function uniqueFsPath(path) {
+      if (!(await fsExists(path))) return path;
+      const i = path.lastIndexOf('/');
+      const dir = path.slice(0, i + 1);
+      const file = path.slice(i + 1);
+      const dot = file.lastIndexOf('.');
+      const base = dot > 0 ? file.slice(0, dot) : file;
+      const ext = dot > 0 ? file.slice(dot) : '';
+      for (let n = 2; n < 1000; n++) {
+        const p = `${dir}${base} (${n})${ext}`;
+        if (!(await fsExists(p))) return p;
+      }
+      throw new Error('Không tìm được tên file còn trống');
+    }
+
+    // Di chuyển 1 file trong thư mục gốc. Ưu tiên move(); nếu trình duyệt không hỗ trợ thì chép + kiểm tra + xóa bản cũ.
+    async function fsMove(srcPath, destPath) {
+      const sp = srcPath.split('/');
+      const sName = sp.pop();
+      const dp = destPath.split('/');
+      const dName = dp.pop();
+      const srcDir = await getDirByPath(linkRoot.handle, sp, false);
+      const destDir = await getDirByPath(linkRoot.handle, dp, true);
+      const fh = await srcDir.getFileHandle(sName);
+      if (typeof fh.move === 'function') {
+        try { await fh.move(destDir, dName); return; } catch (e) { /* thử cách chép */ }
+      }
+      const file = await fh.getFile();
+      const nfh = await destDir.getFileHandle(dName, { create: true });
+      const w = await nfh.createWritable();
+      try {
+        await file.stream().pipeTo(w);
+      } catch (e) {
+        try { await w.abort(); } catch {}
+        try { await destDir.removeEntry(dName); } catch {}
+        throw e;
+      }
+      const check = await nfh.getFile();
+      if (check.size !== file.size) {
+        try { await destDir.removeEntry(dName); } catch {}
+        throw new Error('Chép file không khớp dung lượng, đã hủy (file gốc vẫn còn nguyên)');
+      }
+      await srcDir.removeEntry(sName);
+    }
+
+    // Chạy một thao tác ghi: không chạy khi đang quét, phải có quyền ghi
+    async function fsOp(fn, fallback) {
+      if (!linkRoot.handle) return fallback;
+      if (linkScanning || fsBusy) { showToast('Đang quét/di chuyển file, thử lại sau giây lát.', true); return fallback; }
+      if (!(await ensureWritePermission())) {
+        showToast('Chưa được cấp quyền ghi vào thư mục gốc nên chưa thay đổi file nào.', true);
+        return fallback;
+      }
+      fsBusy++;
+      try { return await fn(); } finally { fsBusy--; }
+    }
+
+    async function cleanupEmptyAutoAlbums() {
+      const emptyAuto = albums.filter(a => a.auto && !rawFiles.some(f => f.albumId === a.id));
+      if (!emptyAuto.length) return;
+      await deleteAlbumRecords(emptyAuto.map(a => a.id));
+      const gone = new Set(emptyAuto.map(a => a.id));
+      albums = albums.filter(a => !gone.has(a.id));
+      if (gone.has(currentAlbumId)) currentAlbumId = 'all';
+    }
+
+    function forgetFromViews(keys) {
+      if (activePlaybackFiles) activePlaybackFiles = activePlaybackFiles.filter(f => !keys.has(f.key));
+      keys.forEach(k => selectedKeys.delete(k));
+    }
+
+    // File liên kết -> chuyển vào _Đã xóa. Trả về danh sách key (gốc) đã chuyển thành công.
+    async function trashLinkedItems(items) {
+      if (!items.length) return [];
+      return fsOp(async () => {
+        const moved = [];
+        let failed = 0, lastErr = null, n = 0;
+        for (const it of items) {
+          try {
+            const dest = await uniqueFsPath(TRASH_NAME + '/' + it.path);
+            await fsMove(it.path, dest);
+            moved.push({ orig: it, dest });
+          } catch (err) { failed++; lastErr = err; }
+          n++;
+          if (items.length > 5 && n % 5 === 0) showToast(`Đang chuyển vào Thùng rác... ${n}/${items.length}`, 1500);
+        }
+        if (moved.length) {
+          const created = moved.map(({ orig, dest }) => ({
+            key: 'T:' + dest, name: orig.name, size: orig.size, lastModified: orig.lastModified, type: orig.type,
+            albumId: orig.albumId, linked: true, path: orig.path, trashed: true, trashPath: dest,
+            thumbBlob: orig.thumbBlob, thumbUrl: orig.thumbBlob ? URL.createObjectURL(orig.thumbBlob) : null,
+            thumbFailed: orig.thumbFailed, url: null, _blob: null, _saved: true
+          }));
+          for (const c of created) trashFiles.push(c);
+          const r = await saveItemsMeta(created);
+          if (!r.ok) showToast('Không lưu được danh sách Thùng rác: ' + describeDbError(r.error), true);
+          await deleteItems(moved.map(m => m.orig.key), { fromScan: true });
+          moved.forEach(m => releaseItem(m.orig));
+        }
+        if (failed) showToast(`Không chuyển được ${failed} file: ${(lastErr && (lastErr.message || lastErr.name)) || 'lỗi không rõ'}. File đó vẫn còn nguyên.`, true);
+        return moved.map(m => m.orig.key);
+      }, []);
+    }
+
+    // Khôi phục từ Thùng rác về thư mục cũ (trùng tên thì thêm "(2)")
+    async function restoreTrashItems(items) {
+      if (!items.length) return [];
+      return fsOp(async () => {
+        const albumById = new Map(albums.map(a => [a.id, a]));
+        const albumsToSave = [];
+        const restored = [];
+        let failed = 0, lastErr = null;
+        for (const tr of items) {
+          try {
+            const dest = await uniqueFsPath(tr.path);
+            await fsMove(tr.trashPath, dest);
+            const dir = dest.includes('/') ? dest.slice(0, dest.lastIndexOf('/')) : '';
+            let albumId = 'unassigned';
+            if (dir) {
+              albumId = 'auto:' + dir;
+              if (!albumById.has(albumId)) {
+                const a = { id: albumId, name: dir.split('/').join(' / '), createdAt: Date.now(), auto: true, path: dir };
+                albums.push(a); albumById.set(albumId, a); albumsToSave.push(a);
+              }
+            }
+            restored.push({
+              old: tr,
+              item: {
+                key: 'L:' + dest, name: dest.split('/').pop(), size: tr.size, lastModified: tr.lastModified, type: tr.type,
+                albumId, linked: true, path: dest,
+                thumbBlob: tr.thumbBlob, thumbUrl: tr.thumbBlob ? URL.createObjectURL(tr.thumbBlob) : null,
+                thumbFailed: tr.thumbFailed, url: null, _blob: null, _saved: true
+              }
+            });
+          } catch (err) { failed++; lastErr = err; }
+        }
+        if (restored.length) {
+          for (const a of albumsToSave) await saveAlbumRecord(a);
+          const goneKeys = new Set(restored.map(r => r.old.key));
+          await deleteItems(Array.from(goneKeys), { fromScan: true });
+          restored.forEach(r => releaseItem(r.old));
+          trashFiles = trashFiles.filter(x => !goneKeys.has(x.key));
+          const fresh = restored.map(r => r.item);
+          for (const it of fresh) rawFiles.push(it);
+          const r = await saveItemsMeta(fresh);
+          if (!r.ok) showToast('Không lưu được danh sách file: ' + describeDbError(r.error), true);
+          forgetFromViews(goneKeys);
+        }
+        if (failed) showToast(`Không khôi phục được ${failed} file: ${(lastErr && (lastErr.message || lastErr.name)) || 'lỗi không rõ'}.`, true);
+        return restored.map(r => r.old.key);
+      }, []);
+    }
+
+    // Xóa vĩnh viễn khỏi ổ đĩa (không lấy lại được)
+    async function purgeTrashItems(items) {
+      if (!items.length) return [];
+      return fsOp(async () => {
+        const done = [];
+        let failed = 0, lastErr = null;
+        for (const tr of items) {
+          try {
+            const parts = tr.trashPath.split('/');
+            const name = parts.pop();
+            let dir = null;
+            try { dir = await getDirByPath(linkRoot.handle, parts, false); }
+            catch (e) { if (!e || e.name !== 'NotFoundError') throw e; }
+            if (dir) {
+              try { await dir.removeEntry(name); }
+              catch (e) { if (!e || e.name !== 'NotFoundError') throw e; }
+            }
+            done.push(tr);
+          } catch (err) { failed++; lastErr = err; }
+        }
+        if (done.length) {
+          const goneKeys = new Set(done.map(d => d.key));
+          await deleteItems(Array.from(goneKeys), { fromScan: true });
+          done.forEach(releaseItem);
+          trashFiles = trashFiles.filter(x => !goneKeys.has(x.key));
+          forgetFromViews(goneKeys);
+        }
+        if (failed) showToast(`Không xóa được ${failed} file: ${(lastErr && (lastErr.message || lastErr.name)) || 'lỗi không rõ'}.`, true);
+        return done.map(d => d.key);
+      }, []);
+    }
+
+    // Xóa danh sách file ở màn hình thường: file liên kết -> Thùng rác, file đã nạp -> xóa khỏi app
+    async function removeItemsSmart(items) {
+      const gone = new Set();
+      const linkedItems = items.filter(f => f.linked);
+      const plain = items.filter(f => !f.linked);
+      if (linkedItems.length) (await trashLinkedItems(linkedItems)).forEach(k => gone.add(k));
+      if (plain.length) {
+        await deleteItems(plain.map(f => f.key));
+        plain.forEach(f => { releaseItem(f); gone.add(f.key); });
+      }
+      rawFiles = rawFiles.filter(f => !gone.has(f.key));
+      forgetFromViews(gone);
+      await cleanupEmptyAutoAlbums();
+      return gone;
+    }
+
+    async function purgeFlow(items) {
+      if (!items.length) return;
+      if (!await uiConfirm(`Xóa vĩnh viễn ${items.length} file khỏi ổ đĩa?\nKhông thể lấy lại.`)) return;
+      const done = await purgeTrashItems(items);
+      clearSelection();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+      if (done.length) showToast(`Đã xóa vĩnh viễn ${done.length} file`);
+    }
+
+    async function restoreFlow(items) {
+      if (!items.length) return;
+      const done = await restoreTrashItems(items);
+      clearSelection();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+      if (done.length) showToast(`Đã khôi phục ${done.length} file về thư mục cũ`);
+    }
+
+    function updateTrashUI() {
+      const inTrash = currentAlbumId === 'trash';
+      const bar = document.getElementById('trash-bar');
+      if (bar) {
+        bar.style.display = inTrash ? 'flex' : 'none';
+        document.getElementById('trash-bar-text').textContent =
+          `🗑 Thùng rác = thư mục "${TRASH_NAME}" trong "${linkRoot.name}" • ${trashFiles.length} file. File vẫn còn trên ổ đĩa cho tới khi xóa vĩnh viễn.`;
+      }
+      const rb = document.getElementById('btn-batch-restore');
+      if (rb) rb.style.display = inTrash ? '' : 'none';
+      const dd = document.getElementById('batch-album-dropdown');
+      if (dd) dd.style.display = inTrash ? 'none' : '';
+      const lbl = btnBatchDelete.querySelector('span');
+      if (lbl) lbl.textContent = inTrash ? 'Xóa vĩnh viễn' : 'Xóa đã chọn';
+    }
+
+    async function scanLinkedRoot(opts = {}) {
+      if (linkScanning || fsBusy || !linkRoot.handle) return;
+      if (!(await ensureRootPermission(!!opts.interactive))) {
+        updateLinkBar();
+        if (opts.interactive) showToast('Chưa được cấp quyền đọc thư mục', true);
+        return;
+      }
+      linkScanning = true;
+      updateLinkBar();
+      try {
+        const found = [];
+        try {
+          await walkLinkedDir(linkRoot.handle, '', found);
+        } catch (err) {
+          showToast('Quét thư mục bị lỗi: ' + (err.message || err.name) + '. Giữ nguyên dữ liệu cũ.', true);
+          return;
+        }
+
+        const trashFound = [];
+        try {
+          const td = await linkRoot.handle.getDirectoryHandle(TRASH_NAME);
+          await walkLinkedDir(td, TRASH_NAME, trashFound);
+        } catch (err) {
+          if (!err || err.name !== 'NotFoundError') {
+            showToast('Quét Thùng rác bị lỗi: ' + ((err && (err.message || err.name)) || '') + '. Giữ nguyên dữ liệu cũ.', true);
+            return;
+          }
+        }
+
+        const existing = new Map();
+        rawFiles.forEach(f => { if (f.linked) existing.set(f.path, f); });
+        const foundMap = new Map(found.map(e => [e.path, e]));
+        const trashMap = new Map(trashFound.map(e => [e.path, e]));
+        const trashKnown = new Set(trashFiles.map(x => x.trashPath));
+        const trashGone = trashFiles.filter(x => !trashMap.has(x.trashPath));
+        const trashAdded = trashFound.filter(e => !trashKnown.has(e.path));
+
+        // Chống xóa nhầm: thư mục trống bất thường (ổ đĩa chưa gắn, đổi tên thư mục gốc...)
+        if (found.length === 0 && trashFound.length === 0 && (existing.size > 0 || trashFiles.length > 0)) {
+          showToast('Không thấy file nào trong thư mục (ổ đĩa chưa gắn?). Giữ nguyên dữ liệu cũ.', true);
+          return;
+        }
+
+        // Dọn danh sách ẩn: bỏ những đường dẫn không còn tồn tại
+        let ignoredChanged = false;
+        for (const p of Array.from(linkedIgnored)) {
+          if (!foundMap.has(p)) { linkedIgnored.delete(p); ignoredChanged = true; }
+        }
+        if (ignoredChanged) putHandleRecord({ key: 'ignored', paths: Array.from(linkedIgnored) });
+
+        const removed = Array.from(existing.values()).filter(f => !foundMap.has(f.path));
+        const addedEntries = found.filter(e => !existing.has(e.path) && !linkedIgnored.has(e.path));
+
+        // File chỉ bị di chuyển: tái sử dụng thumbnail cũ
+        const carry = new Map();
+        removed.concat(trashGone).forEach(f => { if (f.thumbBlob) carry.set(`${f.name}|${f.size}|${f.lastModified}`, f.thumbBlob); });
+
+        const newItems = [];
+        const albumsToSave = [];
+        const albumById = new Map(albums.map(a => [a.id, a]));
+        for (let i = 0; i < addedEntries.length; i += 24) {
+          const part = addedEntries.slice(i, i + 24);
+          const files = await Promise.all(part.map(e => e.handle.getFile().catch(() => null)));
+          part.forEach((e, j) => {
+            const f = files[j];
+            if (!f) return;
+            let albumId = 'unassigned';
+            if (e.dir) {
+              albumId = 'auto:' + e.dir;
+              if (!albumById.has(albumId)) {
+                const a = { id: albumId, name: e.dir.split('/').join(' / '), createdAt: Date.now(), auto: true, path: e.dir };
+                albums.push(a);
+                albumById.set(albumId, a);
+                albumsToSave.push(a);
+              }
+            }
+            const item = {
+              key: 'L:' + e.path, name: e.name, size: f.size, lastModified: f.lastModified, type: e.type,
+              albumId, linked: true, path: e.path,
+              thumbBlob: null, thumbUrl: null, thumbFailed: false, url: null, _blob: null, _saved: true
+            };
+            const tb = carry.get(`${f.name}|${f.size}|${f.lastModified}`);
+            if (tb) { item.thumbBlob = tb; item.thumbUrl = URL.createObjectURL(tb); }
+            newItems.push(item);
+          });
+          if (addedEntries.length > 100) showToast(`Đang đọc thông tin file ${Math.min(i + 24, addedEntries.length)}/${addedEntries.length}...`);
+        }
+
+        if (removed.length) {
+          await deleteItems(removed.map(f => f.key), { fromScan: true });
+          removed.forEach(releaseItem);
+          const rs = new Set(removed.map(f => f.key));
+          rawFiles = rawFiles.filter(f => !rs.has(f.key));
+        }
+        if (newItems.length) {
+          for (const it of newItems) rawFiles.push(it);
+          const r = await saveItemsMeta(newItems);
+          if (!r.ok) showToast('Không lưu được danh sách file: ' + describeDbError(r.error), true);
+          for (const a of albumsToSave) await saveAlbumRecord(a);
+        }
+
+        // Thùng rác: bỏ mục đã bị xóa/khôi phục bên ngoài app, nhận thêm file mới bỏ vào _Đã xóa
+        if (trashGone.length) {
+          const gk = new Set(trashGone.map(x => x.key));
+          await deleteItems(Array.from(gk), { fromScan: true });
+          trashGone.forEach(releaseItem);
+          trashFiles = trashFiles.filter(x => !gk.has(x.key));
+          forgetFromViews(gk);
+        }
+        if (trashAdded.length) {
+          const adopted = [];
+          for (let i = 0; i < trashAdded.length; i += 24) {
+            const part = trashAdded.slice(i, i + 24);
+            const files = await Promise.all(part.map(e => e.handle.getFile().catch(() => null)));
+            part.forEach((e, j) => {
+              const f = files[j];
+              if (!f) return;
+              const tb = carry.get(`${f.name}|${f.size}|${f.lastModified}`);
+              adopted.push({
+                key: 'T:' + e.path, name: e.name, size: f.size, lastModified: f.lastModified, type: e.type,
+                albumId: 'unassigned', linked: true, path: e.path.slice(TRASH_NAME.length + 1), trashed: true, trashPath: e.path,
+                thumbBlob: tb || null, thumbUrl: tb ? URL.createObjectURL(tb) : null, thumbFailed: false,
+                url: null, _blob: null, _saved: true
+              });
+            });
+          }
+          for (const it of adopted) trashFiles.push(it);
+          await saveItemsMeta(adopted);
+        }
+
+        // Dọn album tự động đã hết file
+        await cleanupEmptyAutoAlbums();
+
+        renderAlbumSidebar();
+        applyFilterAndRender();
+        queueThumbs(rawFiles.concat(trashFiles).filter(needsThumb));
+
+        if (newItems.length || removed.length) {
+          showToast(`Quét xong: +${newItems.length} file mới, -${removed.length} file không còn trong thư mục`);
+        } else if (!opts.silent) {
+          showToast('Đã quét: thư mục không có thay đổi');
+        }
+      } finally {
+        linkScanning = false;
+        lastLinkScan = Date.now();
+        updateLinkBar();
+      }
+    }
+
+    async function removeLinkedData() {
+      const linked = rawFiles.filter(f => f.linked).concat(trashFiles);
+      await deleteItems(linked.map(f => f.key), { fromScan: true });
+      linked.forEach(releaseItem);
+      const ks = new Set(linked.map(f => f.key));
+      rawFiles = rawFiles.filter(f => !ks.has(f.key));
+      trashFiles = [];
+      const autos = albums.filter(a => a.auto);
+      if (autos.length) {
+        const ids = new Set(autos.map(a => a.id));
+        // file nạp thủ công từng được chuyển vào album tự động -> về "Chưa phân loại"
+        const stray = rawFiles.filter(f => ids.has(f.albumId));
+        stray.forEach(f => { f.albumId = 'unassigned'; });
+        await saveItemsMeta(stray);
+        await deleteAlbumRecords(Array.from(ids));
+        albums = albums.filter(a => !ids.has(a.id));
+      }
+      if (currentAlbumId !== 'all' && currentAlbumId !== 'unassigned' && !albums.some(a => a.id === currentAlbumId)) {
+        currentAlbumId = 'all';
+      }
+    }
+
+    async function linkNewRoot() {
+      let handle;
+      try {
+        handle = await window.showDirectoryPicker({ id: 'mv-root', mode: 'read' });
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        showToast('Không chọn được thư mục này. Chrome không cho chọn các thư mục hệ thống như Desktop, Documents, Downloads: hãy chọn một thư mục con.', true);
+        return;
+      }
+      if (linkRoot.handle) {
+        const ok = await uiConfirm(`Đang liên kết "${linkRoot.name}". Đổi sang "${handle.name}"?\n(Các file liên kết cũ sẽ gỡ khỏi app, file gốc không bị ảnh hưởng.)`);
+        if (!ok) return;
+        await removeLinkedData();
+      }
+      linkRoot = { handle, name: handle.name, granted: true };
+      linkedIgnored = new Set();
+      await putHandleRecord({ key: 'root', handle, name: handle.name });
+      await putHandleRecord({ key: 'ignored', paths: [] });
+      clearSelection();
+      updateLinkBar();
+      await scanLinkedRoot({});
+    }
+
+    async function unlinkRoot() {
+      if (!linkRoot.handle) return;
+      const ok = await uiConfirm(`Gỡ liên kết thư mục "${linkRoot.name}"?\nChỉ gỡ ảnh, video và album tự tạo từ thư mục này khỏi app. File gốc trong máy không bị ảnh hưởng.`);
+      if (!ok) return;
+      await removeLinkedData();
+      await deleteHandleRecords(['root', 'ignored']);
+      linkRoot = { handle: null, name: '', granted: false };
+      linkedIgnored = new Set();
+      clearSelection();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+      updateLinkBar();
+      showToast('Đã gỡ liên kết thư mục');
+    }
+
+    async function restoreIgnored() {
+      if (linkedIgnored.size === 0) return;
+      const ok = await uiConfirm(`Hiện lại ${linkedIgnored.size} file đã ẩn khỏi app?`);
+      if (!ok) return;
+      linkedIgnored = new Set();
+      await putHandleRecord({ key: 'ignored', paths: [] });
+      await scanLinkedRoot({ interactive: true });
+    }
+
+    function updateLinkBar() {
+      const bar = document.getElementById('link-bar');
+      const menuLink = document.getElementById('menu-link-root');
+      if (menuLink) menuLink.style.display = LINK_SUPPORTED ? '' : 'none';
+      if (!bar) return;
+      if (!LINK_SUPPORTED || !linkRoot.handle) { bar.style.display = 'none'; return; }
+      const n = rawFiles.filter(f => f.linked).length;
+      bar.style.display = 'flex';
+      document.getElementById('link-bar-text').textContent =
+        `🔗 ${linkRoot.name} • ${n} file` + (linkScanning ? ' • đang quét...' : '') + (!linkRoot.granted ? ' • cần cấp quyền đọc thư mục' : '');
+      document.getElementById('link-btn-connect').style.display = linkRoot.granted ? 'none' : '';
+      const rescan = document.getElementById('link-btn-rescan');
+      rescan.style.display = linkRoot.granted ? '' : 'none';
+      rescan.disabled = linkScanning;
+      const restore = document.getElementById('link-btn-restore');
+      restore.style.display = linkedIgnored.size > 0 ? '' : 'none';
+      restore.textContent = `Hiện lại ${linkedIgnored.size} file đã ẩn`;
+    }
+
+    async function initLinkedFolder() {
+      updateLinkBar();
+      if (!LINK_SUPPORTED || !db) return;
+      const rec = await getHandleRecord('root');
+      if (!rec || !rec.handle) return;
+      const ign = await getHandleRecord('ignored');
+      linkedIgnored = new Set((ign && ign.paths) || []);
+      linkRoot = { handle: rec.handle, name: rec.name || rec.handle.name, granted: false };
+      const ok = await ensureRootPermission(false);
+      updateLinkBar();
+      if (ok) scanLinkedRoot({ silent: true });
+    }
+
+    document.getElementById('menu-link-root').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDropdownMenu.classList.remove('show');
+      linkNewRoot();
+    });
+    document.getElementById('link-btn-connect').addEventListener('click', async () => {
+      const ok = await ensureRootPermission(true);
+      updateLinkBar();
+      if (ok) await scanLinkedRoot({});
+      else showToast('Chưa được cấp quyền đọc thư mục', true);
+    });
+    document.getElementById('link-btn-rescan').addEventListener('click', () => scanLinkedRoot({ interactive: true }));
+    document.getElementById('link-btn-unlink').addEventListener('click', unlinkRoot);
+    document.getElementById('link-btn-restore').addEventListener('click', restoreIgnored);
+
+    // Quay lại tab sau khi thêm file bằng Finder -> tự quét lại
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && linkRoot.handle && linkRoot.granted && !linkScanning &&
+          Date.now() - lastLinkScan > 30000) {
+        scanLinkedRoot({ silent: true });
+      }
+    });
 
     // ===== PWA: Service Worker (mở được khi mất mạng) =====
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

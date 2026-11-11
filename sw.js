@@ -1,5 +1,5 @@
 // Service worker: ưu tiên mạng (luôn lấy bản mới), mất mạng thì dùng bản đã lưu
-const CACHE = 'media-viewer-v1';
+const CACHE = 'media-viewer-v2';
 const PRECACHE = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
