@@ -5223,6 +5223,7 @@ body[data-view="gallery"] #gallery {
 
 
     lbContainer.addEventListener('dblclick', (e) => {
+      if (Date.now() < dblGuardUntil) return;
       if (e.target.closest('button') || e.target.closest('video') || e.target.closest('.help-modal')) return;
       const activeList = getActiveMediaList();
       const current = activeList[currentIndex];
@@ -5486,6 +5487,46 @@ body[data-view="gallery"] #gallery {
     let initialZoom = 1;
     let touchPanStartX = 0;
     let touchPanStartY = 0;
+    let pinching = false;
+    let pinch = null;
+    let lastTapTime = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+    let dblGuardUntil = 0;
+    let zoomAnimTimer = null;
+
+    // Kích thước thật của ảnh đang hiển thị (ảnh dùng object-fit: contain trong khung đầy màn hình)
+    function lbContentSize() {
+      const bw = lbImg.clientWidth || 1, bh = lbImg.clientHeight || 1;
+      const nw = lbImg.naturalWidth || bw, nh = lbImg.naturalHeight || bh;
+      const f = Math.min(bw / nw, bh / nh);
+      return { w: nw * f, h: nh * f };
+    }
+
+    // Giữ ảnh không trôi ra khỏi khung khi đã phóng to
+    function clampPan(z) {
+      const sz = lbContentSize();
+      const swap = Math.abs(rotation) % 180 === 90;
+      const cw = (swap ? sz.h : sz.w) * z;
+      const ch = (swap ? sz.w : sz.h) * z;
+      const mx = Math.max(0, (cw - lbImg.clientWidth) / 2);
+      const my = Math.max(0, (ch - lbImg.clientHeight) / 2);
+      panX = Math.max(-mx, Math.min(mx, panX));
+      panY = Math.max(-my, Math.min(my, panY));
+    }
+
+    // Chạy hiệu ứng mượt tới trạng thái zoom/pan mới (nhả tay, chạm đúp)
+    function animateToView() {
+      clearTimeout(zoomAnimTimer);
+      lbImg.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      updateTransform();
+      zoomAnimTimer = setTimeout(() => { lbImg.style.transition = ''; }, 300);
+    }
+
+    function lbBodyCenter() {
+      const r = lbBody.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
 
     lbBody.addEventListener('touchstart', (e) => {
       const tgt = e.target;
@@ -5499,6 +5540,17 @@ body[data-view="gallery"] #gallery {
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         touchPinchDist = Math.hypot(dx, dy);
         initialZoom = zoomLevel;
+        if (lbCurrentItem && lbCurrentItem.type === 'video') return;
+        clearTimeout(zoomAnimTimer);
+        lbImg.style.transition = 'none';
+        const o = lbBodyCenter();
+        pinching = true;
+        pinch = {
+          d0: touchPinchDist || 1,
+          mx0: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+          my0: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+          z0: zoomLevel, px0: panX, py0: panY, ox: o.x, oy: o.y
+        };
       } else if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
@@ -5516,9 +5568,17 @@ body[data-view="gallery"] #gallery {
         // Thu phóng bằng 2 ngón tay
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
+        if (!pinching || !pinch) return;
         const currentDist = Math.hypot(dx, dy);
-        const factor = currentDist / touchPinchDist;
-        setZoom(initialZoom * factor);
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const z = Math.max(0.5, Math.min(5, pinch.z0 * currentDist / pinch.d0));
+        const k = z / pinch.z0;
+        // Điểm ảnh dưới 2 ngón lúc bắt đầu chụm luôn nằm dưới trung điểm 2 ngón hiện tại
+        panX = mx - pinch.ox - k * (pinch.mx0 - pinch.ox - pinch.px0);
+        panY = my - pinch.oy - k * (pinch.my0 - pinch.oy - pinch.py0);
+        zoomLevel = z;
+        updateTransform();
       } else if (e.touches.length === 1 && zoomLevel > 1) {
         // Kéo di chuyển ảnh khi đã phóng to
         panX = e.touches[0].clientX - touchPanStartX;
@@ -5531,6 +5591,20 @@ body[data-view="gallery"] #gallery {
       if (e.touches.length < 2) {
         touchPinchDist = 0;
       }
+      if (pinching) {
+        if (e.touches.length === 1) {
+          // Nhấc bớt 1 ngón: ngón còn lại tiếp tục kéo ảnh, không bị nhảy
+          touchPanStartX = e.touches[0].clientX - panX;
+          touchPanStartY = e.touches[0].clientY - panY;
+        } else if (e.touches.length === 0) {
+          pinching = false;
+          pinch = null;
+          if (zoomLevel < 1.05) { zoomLevel = 1; panX = 0; panY = 0; }
+          else clampPan(zoomLevel);
+          animateToView();
+        }
+        return;
+      }
       if (touchIgnore) return;
       if (e.changedTouches.length === 1) {
         const touchEndX = e.changedTouches[0].clientX;
@@ -5538,6 +5612,30 @@ body[data-view="gallery"] #gallery {
         const deltaX = touchEndX - touchStartX;
         const deltaY = touchEndY - touchStartY;
         const timeDiff = Date.now() - touchStartTime;
+
+        // Chạm đúp: phóng 2x tại điểm chạm, chạm đúp lần nữa để về cũ (chỉ ảnh)
+        if (Math.hypot(deltaX, deltaY) < 12 && timeDiff < 300 &&
+            !(lbCurrentItem && lbCurrentItem.type === 'video')) {
+          const now = Date.now();
+          if (now - lastTapTime < 320 && Math.hypot(touchEndX - lastTapX, touchEndY - lastTapY) < 40) {
+            lastTapTime = 0;
+            dblGuardUntil = now + 700;
+            swipeGuardUntil = now + 500;
+            toggleLightboxUI(); // hoàn lại lần bật/tắt thanh công cụ do cú chạm thứ nhất
+            if (zoomLevel > 1.05) {
+              zoomLevel = 1; panX = 0; panY = 0;
+            } else {
+              const o = lbBodyCenter();
+              zoomLevel = 2;
+              panX = -(touchEndX - o.x);
+              panY = -(touchEndY - o.y);
+              clampPan(2);
+            }
+            animateToView();
+            return;
+          }
+          lastTapTime = now; lastTapX = touchEndX; lastTapY = touchEndY;
+        }
 
         // Chỉ vuốt chuyển ảnh/video khi đang ở kích thước chuẩn (zoomLevel === 1)
         if (zoomLevel === 1 && timeDiff < 500) {
