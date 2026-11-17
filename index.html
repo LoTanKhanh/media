@@ -3030,6 +3030,11 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         <span class="btn-label touch-label">Yêu thích</span>
       </button>
 
+      <button id="btn-batch-share" class="btn icon-only-btn" data-tip="Lưu vào Ảnh / Chia sẻ các file đã chọn" title="Lưu vào Ảnh / Chia sẻ các file đã chọn" aria-label="Lưu vào Ảnh / Chia sẻ các file đã chọn">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z"/></svg>
+        <span class="btn-label touch-label">Lưu vào Ảnh</span>
+      </button>
+
       <div class="dropdown" id="batch-mark-dropdown">
         <button id="btn-batch-mark" class="btn icon-only-btn" data-tip="Đánh dấu Giữ / Phân vân / Loại" title="Đánh dấu Giữ / Phân vân / Loại" aria-label="Đánh dấu Giữ / Phân vân / Loại">
           <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -6351,6 +6356,48 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     lbSlideshow.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // Lưu vào Ảnh / Chia sẻ (máy tính: tải xuống)
+    async function makeShareFile(item) {
+      const blob = await getItemBlob(item, true);
+      if (!blob || blob === NEEDS_PERM) return null;
+      const ext = (item.name.split('.').pop() || '').toLowerCase();
+      const type = blob.type || MIME_BY_EXT[ext] || (item.type === 'video' ? 'video/mp4' : 'image/jpeg');
+      return new File([blob], item.name, { type });
+    }
+    function downloadFile(file) {
+      const a = document.createElement('a');
+      const u = URL.createObjectURL(file);
+      a.href = u; a.download = file.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 4000);
+    }
+    let pendingShare = null; // file đã chuẩn bị sẵn nếu lần bấm đầu hết quyền chia sẻ
+    document.getElementById('btn-batch-share').addEventListener('click', async () => {
+      const items = displayedFiles.filter(f => selectedKeys.has(f.key));
+      if (items.length === 0) return;
+      const sig = items.map(f => f.key).join('|');
+      let files;
+      if (pendingShare && pendingShare.sig === sig) files = pendingShare.files;
+      else {
+        showToast(`Đang chuẩn bị ${items.length} file...`);
+        files = [];
+        for (const it of items) {
+          try { const f = await makeShareFile(it); if (f) files.push(f); } catch (_) {}
+        }
+      }
+      if (files.length === 0) { showToast('Không đọc được file nào', true); return; }
+      if (navigator.canShare && navigator.canShare({ files })) {
+        try { await navigator.share({ files }); pendingShare = null; }
+        catch (err) {
+          if (err && err.name === 'NotAllowedError') {
+            pendingShare = { sig, files };
+            showToast('Đã chuẩn bị xong, bấm Lưu vào Ảnh thêm lần nữa');
+          } else if (err && err.name !== 'AbortError') showToast('Không chia sẻ được: ' + err.message, true);
+        }
+      } else {
+        files.forEach((f, i) => setTimeout(() => downloadFile(f), i * 400));
+      }
+    });
+
     const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif', mp4: 'video/mp4', mov: 'video/quicktime', m4v: 'video/x-m4v', webm: 'video/webm' };
     document.getElementById('lb-share').addEventListener('click', async (e) => {
       e.stopPropagation();
