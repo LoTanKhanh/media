@@ -2602,6 +2602,13 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   #lb-speed-btn { height: 30px; padding: 0 4px !important; }
 }
 
+/* Thanh chọn nhiều trên iPhone/iPad: xuống dòng thay vì tràn khỏi màn hình */
+@media (hover: none) and (pointer: coarse) {
+  .batch-bar { width: calc(100vw - 16px); max-width: 560px; box-sizing: border-box; flex-wrap: wrap; justify-content: center; gap: 8px 12px; padding: 10px; bottom: calc(env(safe-area-inset-bottom) + 12px); }
+  .batch-bar .batch-actions { flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .batch-bar .batch-actions .btn { padding: 8px 10px; font-size: 13px; }
+}
+
 /* ===== iPhone / iPad (cảm ứng): nút xếp dọc cạnh phải, gần ngón cái; 3 nút lọc gộp thành 1 ===== */
 #lb-filter-btn, #lb-filter-exit { display: none; }
 @media (hover: none) and (pointer: coarse) {
@@ -2617,7 +2624,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   #lightbox.is-video .lightbox-actions { bottom: calc(env(safe-area-inset-bottom) + 120px); }
   #lightbox .lightbox-actions .icon-btn {
     width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
-    background: rgba(28, 28, 32, 0.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    background: rgba(28, 28, 32, 0.82);
   }
   #lightbox .lightbox-actions .icon-btn svg { width: 24px; height: 24px; }
   #lightbox .lightbox-actions #lb-speed-btn { width: 48px; height: 40px; padding: 0 !important; font-size: 13px; }
@@ -6503,6 +6510,12 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     let zoomAnimTimer = null;
     let inertiaRaf = 0, velX = 0, velY = 0, lastMvT = 0, lastMvX = 0, lastMvY = 0;
     let holdTimer = 0, holdFired = false;
+    let gpuTimer = 0;
+    function keepGPU() {
+      lbImg.style.willChange = 'transform';
+      clearTimeout(gpuTimer);
+      gpuTimer = setTimeout(() => { lbImg.style.willChange = ''; }, 350);
+    }
     function stopInertia() { if (inertiaRaf) { cancelAnimationFrame(inertiaRaf); inertiaRaf = 0; } }
     function cancelHold() { clearTimeout(holdTimer); holdTimer = 0; }
     function startInertia() {
@@ -6519,7 +6532,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         const f = Math.pow(0.94, dt / 16.7);
         velX *= f; velY *= f;
         updateTransform();
-        if (Math.hypot(velX, velY) < 0.02) { inertiaRaf = 0; return; }
+        keepGPU();
+        if (Math.hypot(velX, velY) < 0.02) { inertiaRaf = 0; lbImg.style.transition = ''; return; }
         inertiaRaf = requestAnimationFrame(step);
       };
       inertiaRaf = requestAnimationFrame(step);
@@ -6565,6 +6579,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       touchIgnore = !!(tgt.closest && tgt.closest('button, input, .dropdown-menu, .help-modal')) || onVideoBar;
       if (touchIgnore) return;
       stopInertia(); cancelHold(); holdFired = false; velX = velY = 0;
+      if (zoomLevel > 1) { clearTimeout(zoomAnimTimer); lbImg.style.transition = 'none'; }
       if (e.touches.length === 2) {
         // Bắt đầu chụm 2 ngón tay thu phóng (Pinch-to-zoom)
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -6631,6 +6646,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         panX = mx - pinch.ox - k * (pinch.mx0 - pinch.ox - pinch.px0);
         panY = my - pinch.oy - k * (pinch.my0 - pinch.oy - pinch.py0);
         zoomLevel = z;
+        keepGPU();
         updateTransform();
       } else if (e.touches.length === 1 && zoomLevel > 1) {
         // Kéo di chuyển ảnh khi đã phóng to
@@ -6642,6 +6658,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           velX = velX * 0.5 + ix * 0.5; velY = velY * 0.5 + iy * 0.5;
         }
         lastMvT = nt; lastMvX = e.touches[0].clientX; lastMvY = e.touches[0].clientY;
+        keepGPU();
         updateTransform();
       }
     }, { passive: true });
@@ -6671,6 +6688,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         const pdx = e.changedTouches[0].clientX - touchStartX, pdy = e.changedTouches[0].clientY - touchStartY;
         if (Math.hypot(pdx, pdy) > 12) startInertia();
       }
+      if (!inertiaRaf && !pinching && e.touches.length === 0) { lbImg.style.transition = ''; }
       if (e.changedTouches.length === 1) {
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
