@@ -3330,6 +3330,10 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     <div class="ui-modal" role="dialog" aria-modal="true">
       <div id="ui-modal-msg"></div>
       <input id="ui-modal-input" type="text" autocomplete="off" style="display:none;" />
+      <label id="ui-modal-skip-wrap" style="display:none;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text-sub);cursor:pointer;">
+        <input id="ui-modal-skip" type="checkbox" style="width:18px;height:18px;" />
+        <span>Không hỏi lại cho tới khi khởi động lại app</span>
+      </label>
       <div class="ui-modal-actions">
         <button id="ui-modal-cancel" class="btn" data-tip="Hủy" title="Hủy" aria-label="Hủy">Hủy</button>
         <button id="ui-modal-ok" class="btn btn-primary" data-tip="OK" title="OK" aria-label="OK">OK</button>
@@ -3509,7 +3513,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     }
 
     // Hộp thoại riêng (thay confirm/prompt/alert của trình duyệt)
-    function openModal({ message, withInput = false, value = '', okText = 'OK', showCancel = true }) {
+    function openModal({ message, withInput = false, value = '', okText = 'OK', showCancel = true, skipKey = null }) {
       return new Promise((resolve) => {
         const back = document.getElementById('ui-modal');
         const msg = document.getElementById('ui-modal-msg');
@@ -3521,6 +3525,10 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         input.value = value;
         ok.textContent = okText;
         cancel.style.display = showCancel ? '' : 'none';
+        const skipWrap = document.getElementById('ui-modal-skip-wrap');
+        const skipBox = document.getElementById('ui-modal-skip');
+        skipBox.checked = false;
+        skipWrap.style.display = skipKey ? 'flex' : 'none';
         back.classList.add('show');
 
         const finish = (result) => {
@@ -3531,7 +3539,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           cancel.removeEventListener('click', onCancel);
           resolve(result);
         };
-        const onOk = () => finish(withInput ? input.value : true);
+        const onOk = () => { if (skipKey && skipBox.checked) skipConfirmKeys.add(skipKey); finish(withInput ? input.value : true); };
         const onCancel = () => finish(withInput ? null : false);
         const onBack = (e) => { if (e.target === back && showCancel) onCancel(); };
         const onKey = (e) => {
@@ -3546,7 +3554,12 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         setTimeout(() => { (withInput ? input : ok).focus(); if (withInput) input.select(); }, 30);
       });
     }
-    function uiConfirm(message) { return openModal({ message, okText: 'Đồng ý' }); }
+    // Các hộp xác nhận đã chọn "không hỏi lại" (chỉ nhớ trong phiên này, mở lại app là hỏi lại)
+    const skipConfirmKeys = new Set();
+    function uiConfirm(message, skipKey = null) {
+      if (skipKey && skipConfirmKeys.has(skipKey)) return Promise.resolve(true);
+      return openModal({ message, okText: 'Đồng ý', skipKey });
+    }
     function uiPrompt(message, value = '') { return openModal({ message, withInput: true, value, okText: 'Lưu' }); }
     function uiAlert(message) { return openModal({ message, showCancel: false }); }
 
@@ -5516,7 +5529,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       if (target.trashed) confirmMsg = `Xóa vĩnh viễn ${kind} "${target.name}"?\nKhông thể lấy lại.`;
       else if (target.linked) confirmMsg = `Chuyển ${kind} "${target.name}" vào Thùng rác?\n(Có thể khôi phục lại sau.)`;
       else confirmMsg = `Xóa ${kind} "${target.name}"?`;
-      if (!await uiConfirm(confirmMsg)) return;
+      if (!await uiConfirm(confirmMsg, target.trashed ? null : 'delete-current')) return;
 
       let ok;
       if (target.trashed) ok = (await purgeTrashItems([target])).length > 0;
