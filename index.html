@@ -333,9 +333,7 @@
     #sidebar-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.65);
-      backdrop-filter: blur(3px);
-      -webkit-backdrop-filter: blur(3px);
+      background: rgba(0,0,0,.55);
       z-index: 998;
       opacity: 0;
       pointer-events: none;
@@ -2602,6 +2600,25 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   #lb-speed-btn { height: 30px; padding: 0 4px !important; }
 }
 
+/* Thanh bên: lớp phủ không che thanh công cụ trên cùng */
+@media (hover: none) and (pointer: coarse) {
+  #sidebar-backdrop { top: var(--topbar-height); }
+}
+/* iPad: ghim thanh bên (dock bên trái, đẩy nội dung sang phải) */
+#sidebar-mode-btn.sidebar-mode-toggle.active { background: rgba(59,130,246,.22); border-color: #3b82f6; color: #60a5fa; }
+@media (hover: none) and (pointer: coarse) and (min-width: 700px) {
+  body.sidebar-pinned-touch .app-layout { margin-left: 280px; }
+  #album-sidebar.sidebar-overlay.pinned {
+    top: var(--topbar-height) !important;
+    height: calc(100vh - var(--topbar-height)) !important;
+    height: calc(100dvh - var(--topbar-height)) !important;
+    padding-top: 16px !important;
+    box-shadow: none !important;
+    border-right: 1px solid rgba(255,255,255,.1);
+    z-index: 90 !important;
+  }
+}
+
 /* Thanh chọn nhiều trên iPhone/iPad: xuống dòng thay vì tràn khỏi màn hình */
 @media (hover: none) and (pointer: coarse) {
   .batch-bar { width: calc(100vw - 16px); max-width: 560px; box-sizing: border-box; flex-wrap: wrap; justify-content: center; gap: 8px 12px; padding: 10px; bottom: calc(env(safe-area-inset-bottom) + 12px); }
@@ -4139,6 +4156,10 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     let cycleSidebarMode = null;
 
     btnToggleSidebar.addEventListener('click', () => {
+      if (document.body.classList.contains('sidebar-pinned-touch') && typeof cycleSidebarMode === 'function') {
+        cycleSidebarMode();
+        return;
+      }
       if (window.innerWidth <= 768 || !window.matchMedia('(hover: hover)').matches) {
         const isShowing = albumSidebar.classList.toggle('show');
         const bd = document.getElementById('sidebar-backdrop');
@@ -6886,6 +6907,10 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       } catch (err) {}
 
       let hideTimer = null;
+      let touchPinned = false;
+      try { touchPinned = localStorage.getItem('mv_touch_pin') === '1'; } catch (err) {}
+
+      function isTouchWide() { return !isDesktop() && window.innerWidth >= 700; }
 
       function isDesktop() {
         return window.innerWidth > 768 && window.matchMedia('(hover: hover)').matches;
@@ -6919,6 +6944,18 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
 
         // Điện thoại/máy cảm ứng: thanh bên là lớp phủ trượt (cần class sidebar-overlay)
         sidebar.classList.toggle('sidebar-overlay', !isDesktop());
+        const docked = !isDesktop() && isTouchWide() && touchPinned;
+        document.body.classList.toggle('sidebar-pinned-touch', docked);
+        if (!isDesktop() && modeBtn) {
+          // iPad: nút này ghim / bỏ ghim. iPhone quá hẹp nên ẩn nút.
+          modeBtn.style.display = isTouchWide() ? '' : 'none';
+          modeBtn.innerHTML = MODE_ICONS.pinned + '<span class="btn-label">Ghim thanh bên</span>';
+          modeBtn.classList.toggle('active', docked);
+          setBtnLabel(modeBtn, docked ? 'Đang ghim (bấm để bỏ ghim)' : 'Ghim thanh bên');
+        } else if (modeBtn) {
+          modeBtn.style.display = '';
+          modeBtn.classList.remove('active');
+        }
         if (isDesktop()) sidebar.classList.remove('show');
 
         if (isDesktop()) {
@@ -6942,12 +6979,23 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           }
         } else {
           document.body.classList.remove('sidebar-pinned');
-          sidebar.classList.remove('pinned');
+          sidebar.classList.toggle('pinned', docked);
+          if (docked) { sidebar.classList.remove('show'); backdrop?.classList.remove('show'); }
           sidebar.style.width = '';
         }
       };
 
       cycleSidebarMode = function() {
+        if (!isDesktop()) {
+          if (!isTouchWide()) return;
+          touchPinned = !touchPinned;
+          try { localStorage.setItem('mv_touch_pin', touchPinned ? '1' : '0'); } catch (err) {}
+          sidebar.classList.remove('show');
+          backdrop?.classList.remove('show');
+          setSidebarMode(currentMode);
+          showToast(touchPinned ? 'Đã ghim thanh bên' : 'Đã bỏ ghim thanh bên');
+          return;
+        }
         const modes = ['pinned', 'auto', 'rail'];
         const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
         setSidebarMode(next);
@@ -7124,7 +7172,11 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       });
 
       backdrop?.addEventListener('click', () => closeSidebar(true));
-      closeBtn?.addEventListener('click', (e) => { e.stopPropagation(); closeSidebar(true); });
+      closeBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (document.body.classList.contains('sidebar-pinned-touch')) { cycleSidebarMode(); return; }
+        closeSidebar(true);
+      });
       modeBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
         cycleSidebarMode();
