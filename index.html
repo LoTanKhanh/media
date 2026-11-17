@@ -2629,8 +2629,14 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   #lightbox #lb-delete-current { order: 3; }
   #lightbox #lb-slideshow-group { order: 4; }
   #lightbox #lb-rotate { order: 5; }
-  #lightbox #lb-fav { order: 6; }
-  #lightbox #lb-filter-btn { order: 7; display: flex; }
+  #lightbox #lb-share { order: 6; }
+  #lightbox #lb-fav { order: 7; }
+  #lightbox #lb-filter-btn { order: 8; display: flex; }
+  /* Tốc độ slideshow: giữ nút Phát để chọn, bỏ nút tốc độ riêng */
+  #lightbox #lb-speed-btn { display: none; }
+  #lightbox #lb-speed-dropdown { position: static; }
+  #lightbox .slideshow-group { position: relative; }
+  #lightbox #lb-slideshow { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   /* Menu thả ra bên phải nút */
   #lightbox .lightbox-actions .dropdown-menu { top: auto; bottom: 0; right: auto; left: calc(100% + 10px); }
   /* Mặc định ẩn 3 nút 1/2/3 */
@@ -3166,6 +3172,11 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         </button>
         <button id="lb-mark-3" class="icon-btn lb-mark" data-mark="3" title="Loại (3)">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+        </button>
+
+        <!-- Lưu vào Ảnh / Chia sẻ (máy tính: tải xuống) -->
+        <button id="lb-share" class="icon-btn" title="Lưu vào Ảnh">
+          <svg viewBox="0 0 24 24"><path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z"/></svg>
         </button>
 
         <!-- Yêu thích -->
@@ -4601,7 +4612,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       e.stopPropagation(); lightbox.classList.add('filter-mode'); showLightboxUI();
     });
     document.getElementById('lb-filter-exit').addEventListener('click', (e) => {
-      e.stopPropagation(); lightbox.classList.remove('filter-mode');
+      e.stopPropagation(); lightbox.classList.remove('filter-mode'); showLightboxUI();
     });
 
     // Lightbox: nút 1/2/3
@@ -5845,6 +5856,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     }
 
     function hideLightboxUI() {
+      if (lightbox.classList.contains('filter-mode')) return;
       if (isDragging || helpModal.classList.contains('active')) return;
       if (lbVideoModeMenu && lbVideoModeMenu.classList.contains('show')) return;
       if (lbSpeedMenu && lbSpeedMenu.classList.contains('show')) return;
@@ -6320,6 +6332,50 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     lbClose.addEventListener('click', closeLightbox);
     lbRotate.addEventListener('click', rotateImage);
     lbSlideshow.addEventListener('click', toggleSlideshow);
+
+    // Giữ nút Phát để mở menu chọn tốc độ (iPhone/iPad)
+    let lpTimer = 0, lpFired = false;
+    lbSlideshow.addEventListener('touchstart', () => {
+      lpFired = false; clearTimeout(lpTimer);
+      lpTimer = setTimeout(() => {
+        lpFired = true;
+        lbSpeedMenu.classList.add('show');
+        clearTimeout(uiTimer);
+        if (navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
+      }, 450);
+    }, { passive: true });
+    ['touchend', 'touchmove', 'touchcancel'].forEach(ev => lbSlideshow.addEventListener(ev, () => clearTimeout(lpTimer), { passive: true }));
+    lbSlideshow.addEventListener('click', (e) => {
+      if (lpFired) { lpFired = false; e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+    lbSlideshow.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Lưu vào Ảnh / Chia sẻ (máy tính: tải xuống)
+    const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif', mp4: 'video/mp4', mov: 'video/quicktime', m4v: 'video/x-m4v', webm: 'video/webm' };
+    document.getElementById('lb-share').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const item = getActiveMediaList()[currentIndex];
+      if (!item) return;
+      try {
+        const blob = await getItemBlob(item, true);
+        if (!blob || blob === NEEDS_PERM) { showToast('Không đọc được file này', true); return; }
+        const ext = (item.name.split('.').pop() || '').toLowerCase();
+        const type = blob.type || MIME_BY_EXT[ext] || (item.type === 'video' ? 'video/mp4' : 'image/jpeg');
+        const file = new File([blob], item.name, { type });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file] }); }
+          catch (err) { if (err && err.name !== 'AbortError') showToast('Không chia sẻ được: ' + err.message, true); }
+        } else {
+          const a = document.createElement('a');
+          const u = URL.createObjectURL(file);
+          a.href = u; a.download = item.name;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(u), 4000);
+        }
+      } catch (err) {
+        showToast('Lỗi: ' + (err && err.message || err), true);
+      }
+    });
 
     // Video ended event listener
     lbVideo.addEventListener('ended', () => {
