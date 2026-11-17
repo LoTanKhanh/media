@@ -2608,10 +2608,10 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   #lightbox .lightbox-header.ui-hidden { transform: none; }
   #lightbox .lightbox-header.ui-hidden .lightbox-actions { pointer-events: none; }
   #lightbox .lightbox-actions {
-    position: fixed; right: max(12px, env(safe-area-inset-right));
+    position: fixed; left: max(12px, env(safe-area-inset-left));
     bottom: calc(env(safe-area-inset-bottom) + 20px);
-    left: auto; top: auto; width: auto; max-height: calc(100vh - 150px);
-    display: flex; flex-direction: column; flex-wrap: nowrap; align-items: flex-end; justify-content: flex-end;
+    right: auto; top: auto; width: auto; max-height: calc(100vh - 150px);
+    display: flex; flex-direction: column; flex-wrap: nowrap; align-items: flex-start; justify-content: flex-end;
     gap: 12px !important; z-index: 40;
   }
   #lightbox.is-video .lightbox-actions { bottom: calc(env(safe-area-inset-bottom) + 120px); }
@@ -2621,7 +2621,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   }
   #lightbox .lightbox-actions .icon-btn svg { width: 24px; height: 24px; }
   #lightbox .lightbox-actions #lb-speed-btn { width: 48px; height: 40px; padding: 0 !important; font-size: 13px; }
-  #lightbox .lightbox-actions .slideshow-group { flex-direction: column; align-items: flex-end; gap: 8px !important; }
+  #lightbox .lightbox-actions .slideshow-group { flex-direction: column; align-items: flex-start; gap: 8px !important; }
   #lightbox #lb-zoom-box, #lightbox #lb-fullscreen, #lightbox #lb-help-btn { display: none !important; }
   /* Thứ tự từ trên xuống: Đóng, Xóa, Phát, Xoay, Yêu thích, Lọc ảnh (dễ bấm nhất ở dưới cùng) */
   #lightbox #lb-video-mode-dropdown { order: 1; }
@@ -2631,8 +2631,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   #lightbox #lb-rotate { order: 5; }
   #lightbox #lb-fav { order: 6; }
   #lightbox #lb-filter-btn { order: 7; display: flex; }
-  /* Menu thả ra bên trái nút */
-  #lightbox .lightbox-actions .dropdown-menu { top: auto; bottom: 0; right: calc(100% + 10px); }
+  /* Menu thả ra bên phải nút */
+  #lightbox .lightbox-actions .dropdown-menu { top: auto; bottom: 0; right: auto; left: calc(100% + 10px); }
   /* Mặc định ẩn 3 nút 1/2/3 */
   #lightbox .lightbox-actions .lb-mark { display: none; }
   /* Đang lọc: ẩn hết, chỉ còn 3 nút lọc + 1 nút thoát */
