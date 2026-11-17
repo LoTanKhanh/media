@@ -2513,6 +2513,40 @@ body[data-view="gallery"] #gallery {
 }
 #sidebar-mode-btn.sidebar-mode-toggle svg { width: 16px; height: 16px; fill: currentColor; }
 #sidebar-mode-btn.sidebar-mode-toggle .btn-label { display: none; }
+
+/* ===== Ẩn thanh công cụ chính: nhả hẳn chỗ chiếm, không để lại viền đen ===== */
+header.hidden-bar {
+  position: fixed !important;
+  top: 0; left: 0; right: 0;
+  width: 100%;
+}
+body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
+
+/* ===== Yêu thích & Playlist ===== */
+.card-fav-btn {
+  position: absolute; right: 8px; bottom: 8px; width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  opacity: 0; transition: opacity .15s ease, transform .12s ease; z-index: 10; color: #fff;
+}
+.card-fav-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.card-fav-btn:hover { transform: scale(1.12); }
+.image-card:hover .card-fav-btn, .image-card.fav .card-fav-btn { opacity: 1; }
+.image-card.fav .card-fav-btn { color: #ff3b5c; }
+.image-card.fav .card-fav-btn svg { fill: #ff3b5c; }
+@media (hover: none) { .card-fav-btn { opacity: .9; } }
+#lb-fav.fav-on { color: #ff3b5c; }
+#lb-fav.fav-on svg { fill: #ff3b5c; }
+#btn-batch-fav.fav-on { color: #ff3b5c; }
+.fav-nav-icon { fill: #ff3b5c !important; }
+.album-nav-item.nav-create { opacity: .75; }
+.album-nav-item.nav-create:hover { opacity: 1; }
+#batch-playlist-menu {
+  top: auto !important; bottom: 100% !important; margin-bottom: 8px; left: 0; right: auto;
+  max-height: 50vh; max-width: min(260px, calc(100vw - 24px));
+  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+}
+#batch-playlist-menu .dropdown-item { flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 </head>
 <body>
@@ -2695,6 +2729,13 @@ body[data-view="gallery"] #gallery {
           </div>
           <span class="album-badge" id="badge-count-all">0</span>
         </div>
+        <div class="album-nav-item" id="album-nav-fav" data-album-id="fav">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24" class="fav-nav-icon"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <span class="album-name">Yêu thích</span>
+          </div>
+          <span class="album-badge" id="badge-count-fav">0</span>
+        </div>
         <div class="album-nav-item" id="album-nav-unassigned" data-album-id="unassigned" style="display:none;">
           <div class="album-item-left">
             <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
@@ -2708,6 +2749,13 @@ body[data-view="gallery"] #gallery {
             <span class="album-name">Thùng rác</span>
           </div>
           <span class="album-badge" id="badge-count-trash">0</span>
+        </div>
+        <div id="playlist-nav-list"></div>
+        <div class="album-nav-item nav-create" id="playlist-create-btn" role="button" tabindex="0" title="Tạo playlist mới">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span class="album-name">Tạo playlist</span>
+          </div>
         </div>
 
       </div>
@@ -2772,6 +2820,11 @@ body[data-view="gallery"] #gallery {
             <svg class="size-icon size-icon-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
           </div>
 
+          <button id="btn-play-album" class="btn btn-primary icon-only-btn" style="display:none;" data-tip="Phát tất cả (trình chiếu)" title="Phát tất cả (trình chiếu)" aria-label="Phát tất cả (trình chiếu)">
+            <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <span class="btn-label touch-label">Phát</span>
+          </button>
+
           <!-- Nút chọn nhiều -->
           <button id="btn-toggle-select" class="btn icon-only-btn" data-tip="Chọn nhiều file để phát hoặc quản lý" title="Chọn nhiều file để phát hoặc quản lý" aria-label="Chọn nhiều file để phát hoặc quản lý">
             <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -2830,6 +2883,25 @@ body[data-view="gallery"] #gallery {
       <button id="btn-set-cover" class="btn icon-only-btn" style="display:none;" data-tip="Đặt làm ảnh bìa album" title="Đặt làm ảnh bìa album" aria-label="Đặt làm ảnh bìa album">
         <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         <span class="btn-label touch-label">Đặt làm ảnh bìa</span>
+      </button>
+
+      <button id="btn-batch-fav" class="btn icon-only-btn" data-tip="Thêm / bỏ Yêu thích" title="Thêm / bỏ Yêu thích" aria-label="Thêm / bỏ Yêu thích">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        <span class="btn-label touch-label">Yêu thích</span>
+      </button>
+
+      <div class="dropdown" id="batch-playlist-dropdown">
+        <button id="btn-batch-playlist" class="btn icon-only-btn" data-tip="Thêm các file đã chọn vào playlist" title="Thêm các file đã chọn vào playlist" aria-label="Thêm các file đã chọn vào playlist">
+          <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
+          <span class="btn-label touch-label">Thêm vào Playlist ▾</span>
+          <svg class="dropdown-caret" style="width:11px;height:11px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <div id="batch-playlist-menu" class="dropdown-menu" style="min-width:200px;"></div>
+      </div>
+
+      <button id="btn-batch-unplaylist" class="btn icon-only-btn" style="display:none;" data-tip="Bỏ khỏi playlist này (không xóa file)" title="Bỏ khỏi playlist này (không xóa file)" aria-label="Bỏ khỏi playlist này (không xóa file)">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+        <span class="btn-label touch-label">Bỏ khỏi playlist</span>
       </button>
 
       <div class="dropdown" id="batch-album-dropdown">
@@ -2936,6 +3008,11 @@ body[data-view="gallery"] #gallery {
           <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
         </button>
 
+        <!-- Yêu thích -->
+        <button id="lb-fav" class="icon-btn" title="Yêu thích (L)">
+          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        </button>
+
         <!-- Rotate (ảnh) -->
         <button id="lb-rotate" class="icon-btn" title="Xoay 90 độ (R)">
           <svg viewBox="0 0 24 24"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zm1.01 5.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c3.37 0 6.09 2.72 6.09 6.09s-2.72 6.09-6.09 6.09v2.02c4.49 0 8.11-3.62 8.11-8.11 0-4.47-3.6-8.11-8.11-8.11z"/></svg>
@@ -2996,6 +3073,7 @@ body[data-view="gallery"] #gallery {
         <div class="help-row"><kbd>B</kbd> <span>Ẩn / Hiện thanh Album bên trái</span></div>
         <div class="help-row"><kbd>S</kbd> <span>Đổi tốc độ slideshow ảnh</span></div>
         <div class="help-row"><kbd>R</kbd> <span>Xoay ảnh 90 độ</span></div>
+        <div class="help-row"><kbd>L</kbd> <span>Thêm / bỏ Yêu thích</span></div>
         <div class="help-row"><kbd>F</kbd> <span>Bật / Tắt toàn màn hình</span></div>
         <div class="help-row"><kbd>H</kbd> <span>Ẩn / Hiện thanh công cụ</span></div>
         <div class="help-row"><kbd>M</kbd> <span>Đổi chế độ lặp / phát video (4 chế độ)</span></div>
@@ -3433,6 +3511,7 @@ body[data-view="gallery"] #gallery {
       };
       if (item.thumbBlob) m.thumb = item.thumbBlob;
       if (item.thumbFailed) m.thumbFailed = true;
+      if (item.fav) m.fav = true;
       if (item.linked) { m.linked = true; m.path = item.path; }
       if (item.trashed) { m.trashed = true; m.trashPath = item.trashPath; }
       return m;
@@ -3445,6 +3524,7 @@ body[data-view="gallery"] #gallery {
         thumbBlob: m.thumb || null,
         thumbUrl: m.thumb ? URL.createObjectURL(m.thumb) : null,
         thumbFailed: !!m.thumbFailed,
+        fav: !!m.fav,
         linked: !!m.linked, path: m.path || null,
         trashed: !!m.trashed, trashPath: m.trashPath || null,
         url: null, _blob: null
@@ -3579,6 +3659,40 @@ body[data-view="gallery"] #gallery {
       });
     }
     function deleteAlbumRecord(id) { return deleteAlbumRecords([id]); }
+
+    function savePlaylistRecord(pl) {
+      if (!db) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('playlists', 'readwrite');
+          tx.objectStore('playlists').put(pl);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+    function deletePlaylistRecord(id) {
+      if (!db) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('playlists', 'readwrite');
+          tx.objectStore('playlists').delete(id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch { resolve(); }
+      });
+    }
+    function loadPlaylistsFromDB() {
+      if (!db) return Promise.resolve([]);
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('playlists', 'readonly');
+          const req = tx.objectStore('playlists').getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } catch { resolve([]); }
+      });
+    }
 
     function loadAllAlbumsFromDB() {
       if (!db) return Promise.resolve([]);
@@ -3801,12 +3915,15 @@ body[data-view="gallery"] #gallery {
       await initDB();
       if (!db) showToast('Không dùng được bộ nhớ trình duyệt (chế độ riêng tư?). File chỉ xem được đến khi đóng trang.', true);
       requestPersistence();
-      const [savedMeta, savedAlbums] = await Promise.all([
+      const [savedMeta, savedAlbums, savedPlaylists] = await Promise.all([
         loadAllMeta(),
-        loadAllAlbumsFromDB()
+        loadAllAlbumsFromDB(),
+        loadPlaylistsFromDB()
       ]);
 
       albums = savedAlbums || [];
+      playlists = (savedPlaylists || []).filter(pl => pl && pl.id && Array.isArray(pl.keys))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       const allSaved = (savedMeta || []).map(itemFromMeta);
       rawFiles = allSaved.filter(i => !i.trashed);
       trashFiles = allSaved.filter(i => i.trashed);
@@ -3879,6 +3996,18 @@ body[data-view="gallery"] #gallery {
     });
 
     btnRenameAlbum.addEventListener('click', async () => {
+      const curPl = getPlaylist(currentAlbumId);
+      if (curPl) {
+        const nn = await uiPrompt('Nhập tên mới cho playlist:', curPl.name);
+        if (nn && nn.trim() && nn.trim() !== curPl.name) {
+          curPl.name = nn.trim();
+          await savePlaylistRecord(curPl);
+          renderAlbumSidebar();
+          applyFilterAndRender();
+          showToast(`Đã đổi tên thành "${curPl.name}"`);
+        }
+        return;
+      }
       const currentAlbum = albums.find(a => a.id === currentAlbumId);
       if (!currentAlbum) return;
       const newName = await uiPrompt('Nhập tên mới cho album:', currentAlbum.name);
@@ -3892,6 +4021,18 @@ body[data-view="gallery"] #gallery {
     });
 
     btnDeleteAlbum.addEventListener('click', async () => {
+      const curPl = getPlaylist(currentAlbumId);
+      if (curPl) {
+        if (await uiConfirm(`Xóa playlist "${curPl.name}"? Các file trong playlist vẫn được giữ lại trong thư viện.`)) {
+          await deletePlaylistRecord(curPl.id);
+          playlists = playlists.filter(x => x.id !== curPl.id);
+          currentAlbumId = 'all';
+          renderAlbumSidebar();
+          applyFilterAndRender();
+          showToast(`Đã xóa playlist "${curPl.name}"`);
+        }
+        return;
+      }
       const currentAlbum = albums.find(a => a.id === currentAlbumId);
       if (!currentAlbum) return;
       if (await uiConfirm(`Bạn có chắc muốn xóa album "${currentAlbum.name}"? Các file trong album vẫn sẽ được giữ lại trong "Tất cả file".`)) {
@@ -3933,7 +4074,261 @@ body[data-view="gallery"] #gallery {
       });
     }
 
+
+    // ==========================================
+    // YÊU THÍCH & PLAYLIST
+    // ==========================================
+    const FAV_ID = 'fav';
+    const HEART_PATH = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+    const PLAYLIST_PATH = 'M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z';
+    const albumNavFav = document.getElementById('album-nav-fav');
+    const badgeCountFav = document.getElementById('badge-count-fav');
+    const playlistNavList = document.getElementById('playlist-nav-list');
+    const playlistCreateBtn = document.getElementById('playlist-create-btn');
+    const btnBatchFav = document.getElementById('btn-batch-fav');
+    const btnBatchPlaylist = document.getElementById('btn-batch-playlist');
+    const batchPlaylistMenu = document.getElementById('batch-playlist-menu');
+    const batchPlaylistDropdown = document.getElementById('batch-playlist-dropdown');
+    const btnBatchUnplaylist = document.getElementById('btn-batch-unplaylist');
+    const btnPlayAlbum = document.getElementById('btn-play-album');
+    const lbFavBtn = document.getElementById('lb-fav');
+    const EMPTY_DEFAULT = {
+      title: document.getElementById('empty-state-title').textContent,
+      desc: document.getElementById('empty-state-desc').innerHTML
+    };
+    let lbFavDirty = false;
+
+    function isPlaylistId(id) { return typeof id === 'string' && id.indexOf('pl_') === 0; }
+    function getPlaylist(id) { return playlists.find(pl => pl.id === id) || null; }
+    function playlistItems(pl) {
+      const byKey = new Map(rawFiles.map(f => [f.key, f]));
+      return pl.keys.map(k => byKey.get(k)).filter(Boolean);
+    }
+
+    async function createPlaylist(name, keys) {
+      const pl = { id: 'pl_' + Date.now(), name: name, keys: [], createdAt: Date.now() };
+      (keys || []).forEach(k => { if (!pl.keys.includes(k)) pl.keys.push(k); });
+      playlists.push(pl);
+      await savePlaylistRecord(pl);
+      return pl;
+    }
+    async function addKeysToPlaylist(pl, keys) {
+      let added = 0;
+      const have = new Set(pl.keys);
+      (keys || []).forEach(k => { if (!have.has(k)) { pl.keys.push(k); have.add(k); added++; } });
+      if (added) await savePlaylistRecord(pl);
+      return added;
+    }
+    async function removeKeysFromPlaylist(pl, keys) {
+      const rm = new Set(keys || []);
+      const before = pl.keys.length;
+      pl.keys = pl.keys.filter(k => !rm.has(k));
+      if (pl.keys.length !== before) await savePlaylistRecord(pl);
+      return before - pl.keys.length;
+    }
+
+    function updateLbFav(item) {
+      if (!lbFavBtn) return;
+      const on = !!(item && item.fav);
+      lbFavBtn.classList.toggle('fav-on', on);
+      lbFavBtn.title = on ? 'Bỏ yêu thích (L)' : 'Yêu thích (L)';
+    }
+
+    async function setFav(items, value) {
+      const changed = items.filter(i => !!i.fav !== !!value);
+      if (changed.length === 0) return 0;
+      changed.forEach(i => { i.fav = !!value; });
+      const r = await saveItemsMeta(changed.filter(i => i._saved !== false));
+      if (r && r.ok === false) showToast('Không lưu được Yêu thích: ' + describeDbError(r.error), true);
+      changed.forEach(i => {
+        const el = cardEls.get(i.key);
+        if (el) el.classList.toggle('fav', !!i.fav);
+      });
+      if (lightbox.classList.contains('active')) {
+        updateLbFav(getActiveMediaList()[currentIndex]);
+        if (currentAlbumId === FAV_ID) lbFavDirty = true;
+        renderAlbumSidebar();
+      } else {
+        renderAlbumSidebar();
+        if (currentAlbumId === FAV_ID) applyFilterAndRender();
+      }
+      updateFavPlUI();
+      return changed.length;
+    }
+
+    async function toggleFavItem(item) {
+      if (!item) return;
+      await setFav([item], !item.fav);
+      showToast(item.fav ? 'Đã thêm vào Yêu thích' : 'Đã bỏ khỏi Yêu thích');
+    }
+
+    function renderPlaylistNav() {
+      badgeCountFav.textContent = rawFiles.filter(f => f.fav).length;
+      albumNavFav.classList.toggle('active', currentAlbumId === FAV_ID);
+      playlistNavList.innerHTML = '';
+      playlists.forEach(pl => {
+        const n = playlistItems(pl).length;
+        const div = document.createElement('div');
+        div.className = 'album-nav-item' + (currentAlbumId === pl.id ? ' active' : '');
+        div.dataset.albumId = pl.id;
+        div.innerHTML = `
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24"><path d="${PLAYLIST_PATH}"/></svg>
+            <span class="album-name" title="${esc(pl.name)}">${esc(pl.name)}</span>
+          </div>
+          <span class="album-badge">${n}</span>
+        `;
+        div.addEventListener('click', () => {
+          clearSelection();
+          currentAlbumId = pl.id;
+          renderAlbumSidebar();
+          applyFilterAndRender();
+        });
+        setupAlbumDropTarget(div, pl.id);
+        playlistNavList.appendChild(div);
+      });
+    }
+
+    function makeRailItem(id, label, count, svgPath) {
+      const el = document.createElement('div');
+      el.className = 'rail-item' + (currentAlbumId === id ? ' active' : '');
+      el.setAttribute('data-tip', `${label} (${count})`);
+      el.setAttribute('title', `${label} (${count})`);
+      el.setAttribute('aria-label', `${label} (${count})`);
+      el.innerHTML = `<svg viewBox="0 0 24 24"><path d="${svgPath}"/></svg>`;
+      el.addEventListener('click', () => {
+        clearSelection();
+        currentAlbumId = id;
+        renderAlbumSidebar();
+        applyFilterAndRender();
+      });
+      setupAlbumDropTarget(el, id);
+      return el;
+    }
+
+    // Cập nhật các nút/nhãn phụ thuộc đang xem Yêu thích / Playlist
+    function updateFavPlUI() {
+      const inFav = currentAlbumId === FAV_ID;
+      const pl = isPlaylistId(currentAlbumId) ? getPlaylist(currentAlbumId) : null;
+      const inTrash = currentAlbumId === 'trash';
+      const special = inFav || !!pl;
+      btnClearAll.style.display = special ? 'none' : '';
+      btnPlayAlbum.style.display = special ? '' : 'none';
+      btnBatchUnplaylist.style.display = pl ? '' : 'none';
+      batchPlaylistDropdown.style.display = inTrash ? 'none' : '';
+      btnBatchFav.style.display = inTrash ? 'none' : '';
+      const sel = rawFiles.filter(f => selectedKeys.has(f.key));
+      btnBatchFav.classList.toggle('fav-on', sel.length > 0 && sel.every(f => f.fav));
+      const t = document.getElementById('empty-state-title');
+      const d = document.getElementById('empty-state-desc');
+      const fb = document.getElementById('empty-folder-buttons');
+      if (inFav) {
+        t.textContent = 'Chưa có file yêu thích';
+        d.textContent = 'Rê chuột vào ảnh/video rồi bấm hình trái tim, hoặc chọn nhiều file rồi bấm nút Yêu thích ở thanh dưới.';
+        fb.style.display = 'none';
+      } else if (pl) {
+        t.textContent = 'Playlist đang trống';
+        d.textContent = 'Chọn file ở "Tất cả file", bấm nút Thêm vào Playlist ở thanh dưới, hoặc kéo file thả vào playlist này.';
+        fb.style.display = 'none';
+      } else {
+        t.textContent = EMPTY_DEFAULT.title;
+        d.innerHTML = EMPTY_DEFAULT.desc;
+        fb.style.display = '';
+      }
+    }
+
+    albumNavFav.addEventListener('click', () => {
+      clearSelection();
+      currentAlbumId = FAV_ID;
+      renderAlbumSidebar();
+      applyFilterAndRender();
+    });
+    setupAlbumDropTarget(albumNavFav, FAV_ID);
+
+    async function promptCreatePlaylist(keys) {
+      const name = await uiPrompt('Nhập tên Playlist mới:');
+      if (!name || !name.trim()) return null;
+      const pl = await createPlaylist(name.trim(), keys || []);
+      showToast(`Đã tạo playlist "${pl.name}"` + (keys && keys.length ? ` với ${pl.keys.length} file` : ''));
+      return pl;
+    }
+    playlistCreateBtn.addEventListener('click', async () => {
+      const pl = await promptCreatePlaylist([]);
+      if (!pl) return;
+      currentAlbumId = pl.id;
+      renderAlbumSidebar();
+      applyFilterAndRender();
+    });
+    playlistCreateBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter') playlistCreateBtn.click(); });
+
+    // Thanh chọn nhiều: Yêu thích + Playlist
+    btnBatchFav.addEventListener('click', async () => {
+      const items = rawFiles.filter(f => selectedKeys.has(f.key));
+      if (items.length === 0) return;
+      const makeFav = !items.every(f => f.fav);
+      const n = await setFav(items, makeFav);
+      showToast(makeFav ? `Đã thêm ${n || items.length} file vào Yêu thích` : `Đã bỏ ${n || items.length} file khỏi Yêu thích`);
+      updateFavPlUI();
+    });
+
+    function updateBatchPlaylistMenu() {
+      batchPlaylistMenu.innerHTML = '';
+      playlists.forEach(pl => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.innerHTML = `<span>🎵 ${esc(pl.name)}</span>`;
+        item.addEventListener('click', async () => {
+          batchPlaylistMenu.classList.remove('show');
+          const keys = Array.from(selectedKeys);
+          const n = await addKeysToPlaylist(pl, keys);
+          renderAlbumSidebar();
+          if (currentAlbumId === pl.id) applyFilterAndRender();
+          showToast(n ? `Đã thêm ${n} file vào playlist "${pl.name}"` : `Các file này đã có trong playlist "${pl.name}"`);
+        });
+        batchPlaylistMenu.appendChild(item);
+      });
+      const nw = document.createElement('div');
+      nw.className = 'dropdown-item';
+      nw.innerHTML = '<span>＋ Playlist mới…</span>';
+      nw.addEventListener('click', async () => {
+        batchPlaylistMenu.classList.remove('show');
+        const pl = await promptCreatePlaylist(Array.from(selectedKeys));
+        if (pl) { renderAlbumSidebar(); }
+      });
+      batchPlaylistMenu.appendChild(nw);
+    }
+    btnBatchPlaylist.addEventListener('click', (e) => {
+      e.stopPropagation();
+      updateBatchPlaylistMenu();
+      batchPlaylistMenu.classList.toggle('show');
+    });
+    window.addEventListener('click', (e) => {
+      if (!e.target.closest('#batch-playlist-dropdown')) batchPlaylistMenu.classList.remove('show');
+    });
+
+    btnBatchUnplaylist.addEventListener('click', async () => {
+      const pl = getPlaylist(currentAlbumId);
+      if (!pl || selectedKeys.size === 0) return;
+      const n = await removeKeysFromPlaylist(pl, Array.from(selectedKeys));
+      clearSelection();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+      showToast(`Đã bỏ ${n} file khỏi playlist "${pl.name}" (file vẫn còn trong thư viện)`);
+    });
+
+    btnPlayAlbum.addEventListener('click', () => {
+      if (displayedFiles.length === 0) { showToast('Chưa có file nào để phát'); return; }
+      openLightbox(0);
+      startSlideshow();
+    });
+
+    lbFavBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await toggleFavItem(getActiveMediaList()[currentIndex]);
+    });
+
     function renderAlbumSidebar() {
+      renderPlaylistNav();
       // Calculate counts
       const countAll = rawFiles.length;
       badgeCountAll.textContent = countAll;
@@ -4053,6 +4448,12 @@ body[data-view="gallery"] #gallery {
           railWrap.appendChild(itemTrash);
         }
 
+        // Yêu thích + Playlist
+        railWrap.appendChild(makeRailItem(FAV_ID, 'Yêu thích', rawFiles.filter(f => f.fav).length, HEART_PATH));
+        playlists.forEach(pl => {
+          railWrap.appendChild(makeRailItem(pl.id, pl.name, playlistItems(pl).length, PLAYLIST_PATH));
+        });
+
         // Tạo album
         const createBtn = document.createElement('button');
         createBtn.className = 'rail-item rail-create-btn';
@@ -4103,11 +4504,21 @@ body[data-view="gallery"] #gallery {
       } else if (isCustom) {
         const found = albums.find(a => a.id === currentAlbumId);
         if (found) title = found.name;
+      } else if (currentAlbumId === FAV_ID) {
+        title = 'Yêu thích';
       }
+      const curPl = isPlaylistId(currentAlbumId) ? getPlaylist(currentAlbumId) : null;
+      if (curPl) title = curPl.name;
       currentAlbumNameText.textContent = title;
 
-      btnRenameAlbum.style.display = isCustom ? 'inline-flex' : 'none';
-      btnDeleteAlbum.style.display = isCustom ? 'inline-flex' : 'none';
+      btnRenameAlbum.style.display = (isCustom || curPl) ? 'inline-flex' : 'none';
+      btnDeleteAlbum.style.display = (isCustom || curPl) ? 'inline-flex' : 'none';
+      {
+        const delTip = curPl ? 'Xóa playlist này (file vẫn giữ trong thư viện)' : 'Xóa album này (file sẽ chuyển về Chưa phân loại)';
+        btnDeleteAlbum.title = delTip; btnDeleteAlbum.setAttribute('data-tip', delTip); btnDeleteAlbum.setAttribute('aria-label', delTip);
+        const renTip = curPl ? 'Đổi tên playlist' : 'Đổi tên album';
+        btnRenameAlbum.title = renTip; btnRenameAlbum.setAttribute('data-tip', renTip); btnRenameAlbum.setAttribute('aria-label', renTip);
+      }
       if (btnRemoveCover) {
         const curAlbumObj = isCustom ? albums.find(a => a.id === currentAlbumId) : null;
         btnRemoveCover.style.display = (curAlbumObj && curAlbumObj.coverKey) ? 'inline-flex' : 'none';
@@ -4121,6 +4532,7 @@ body[data-view="gallery"] #gallery {
       setBtnLabel(btnClearAll, clearText);
       updateAlbumManageBar();
       updateTrashUI();
+      updateFavPlUI();
     }
 
     function handleAlbumCheckClick(e, id, div) {
@@ -4204,6 +4616,22 @@ body[data-view="gallery"] #gallery {
 
     async function moveMediaToAlbum(keys, targetAlbumId) {
       if (!keys || keys.length === 0) return;
+      if (targetAlbumId === FAV_ID) {
+        const its = rawFiles.filter(f => keys.includes(f.key));
+        const n = await setFav(its, true);
+        showToast(n ? `Đã thêm ${n} file vào Yêu thích` : 'Các file này đã ở trong Yêu thích');
+        return;
+      }
+      if (isPlaylistId(targetAlbumId)) {
+        const pl = getPlaylist(targetAlbumId);
+        if (!pl) return;
+        const valid = rawFiles.filter(f => keys.includes(f.key)).map(f => f.key);
+        const n = await addKeysToPlaylist(pl, valid);
+        renderAlbumSidebar();
+        if (currentAlbumId === pl.id) applyFilterAndRender();
+        showToast(n ? `Đã thêm ${n} file vào playlist "${pl.name}"` : `Các file này đã có trong playlist "${pl.name}"`);
+        return;
+      }
       const moved = [];
       for (const item of rawFiles) {
         if (keys.includes(item.key)) {
@@ -4255,6 +4683,10 @@ body[data-view="gallery"] #gallery {
       });
 
       const count = selectedKeys.size;
+      if (typeof btnBatchFav !== 'undefined' && btnBatchFav) {
+        const selItems = rawFiles.filter(f => selectedKeys.has(f.key));
+        btnBatchFav.classList.toggle('fav-on', selItems.length > 0 && selItems.every(f => f.fav));
+      }
       batchCountBadge.textContent = count;
       batchText.textContent = `Đã chọn ${count} file`;
 
@@ -4631,6 +5063,10 @@ body[data-view="gallery"] #gallery {
     btnFullscreenMain.addEventListener('click', toggleFullScreen);
     lbFullscreen.addEventListener('click', toggleFullScreen);
 
+    new MutationObserver(() => {
+      document.body.classList.toggle('header-hidden', mainHeader.classList.contains('hidden-bar'));
+    }).observe(mainHeader, { attributes: true, attributeFilter: ['class'] });
+
     hideHeaderBtn.addEventListener('click', () => {
       mainHeader.classList.add('hidden-bar');
     });
@@ -4787,7 +5223,7 @@ body[data-view="gallery"] #gallery {
 
         // Tự động nhận diện thư mục con
         const subfolder = extractSubfolderName(f);
-        let fileAlbumId = (currentAlbumId !== 'all') ? currentAlbumId : 'unassigned';
+        let fileAlbumId = (currentAlbumId !== 'all' && currentAlbumId !== FAV_ID && !isPlaylistId(currentAlbumId)) ? currentAlbumId : 'unassigned';
 
         if (subfolder && subfolder.trim()) {
           const cleanName = subfolder.trim();
@@ -4877,6 +5313,8 @@ body[data-view="gallery"] #gallery {
       const typeChoice = typeFilter.value;
 
       const pool = (currentAlbumId === 'trash') ? trashFiles : rawFiles;
+      const viewPl = isPlaylistId(currentAlbumId) ? getPlaylist(currentAlbumId) : null;
+      const plOrder = viewPl ? new Map(viewPl.keys.map((k, i) => [k, i])) : null;
       displayedFiles = pool.filter(item => {
         const matchName = item.name.toLowerCase().includes(keyword);
         const matchType = typeChoice === 'all' || item.type === typeChoice;
@@ -4884,6 +5322,10 @@ body[data-view="gallery"] #gallery {
         let matchAlbum = true;
         if (currentAlbumId === 'all' || currentAlbumId === 'trash') {
           matchAlbum = true;
+        } else if (currentAlbumId === FAV_ID) {
+          matchAlbum = !!item.fav;
+        } else if (viewPl) {
+          matchAlbum = plOrder.has(item.key);
         } else {
           matchAlbum = (currentAlbumId === 'unassigned') ? isUnassigned(item) : (item.albumId === currentAlbumId);
         }
@@ -4891,7 +5333,8 @@ body[data-view="gallery"] #gallery {
         return matchName && matchType && matchAlbum;
       });
 
-      displayedFiles.sort((a, b) => {
+      if (plOrder) displayedFiles.sort((a, b) => plOrder.get(a.key) - plOrder.get(b.key));
+      else displayedFiles.sort((a, b) => {
         if (sortType === 'name-asc') return a.name.localeCompare(b.name, undefined, { numeric: true });
         if (sortType === 'name-desc') return b.name.localeCompare(a.name, undefined, { numeric: true });
         if (sortType === 'date-desc') return b.lastModified - a.lastModified;
@@ -4996,9 +5439,41 @@ body[data-view="gallery"] #gallery {
       }
     }
 
-    lightbox.addEventListener('mousemove', () => {
-      if (lightbox.classList.contains('active')) {
-        showLightboxUI();
+    // Máy có chuột: từng thanh chỉ hiện khi chuột rê tới vùng của nó
+    // (thanh trên = dải đầu màn hình, nút trước/sau = mép trái/phải). Đụng chuột ở giữa không làm hiện gì.
+    let zoneHideTimer = null;
+    const hasMouse = window.matchMedia('(hover: hover)').matches;
+    function lbMenusOpen() {
+      return isDragging || helpModal.classList.contains('active') ||
+        (lbVideoModeMenu && lbVideoModeMenu.classList.contains('show')) ||
+        (lbSpeedMenu && lbSpeedMenu.classList.contains('show'));
+    }
+    lightbox.addEventListener('mousemove', (e) => {
+      if (!hasMouse || !lightbox.classList.contains('active')) return;
+      const topH = (lbHeader.offsetHeight || 56) + 16;
+      const inTop = e.clientY <= topH;
+      const edge = 110;
+      const midY = e.clientY > topH && e.clientY < window.innerHeight - 90;
+      const inL = midY && e.clientX <= edge;
+      const inR = midY && e.clientX >= window.innerWidth - edge;
+      if (inTop || inL || inR) {
+        clearTimeout(zoneHideTimer); clearTimeout(uiTimer);
+        isUiHidden = false;
+        lbHeader.classList.toggle('ui-hidden', !inTop);
+        lbPrev.classList.toggle('ui-hidden', !inL);
+        lbNext.classList.toggle('ui-hidden', !inR);
+        lbBody.classList.remove('hide-cursor');
+      } else if (!lbHeader.matches(':hover') && !lbMenusOpen()) {
+        clearTimeout(uiTimer);
+        clearTimeout(zoneHideTimer);
+        zoneHideTimer = setTimeout(() => {
+          if (lbMenusOpen() || lbHeader.matches(':hover')) return;
+          isUiHidden = true;
+          lbHeader.classList.add('ui-hidden');
+          lbPrev.classList.add('ui-hidden');
+          lbNext.classList.add('ui-hidden');
+          lbBody.classList.add('hide-cursor');
+        }, 250);
       }
     });
 
@@ -5085,7 +5560,7 @@ body[data-view="gallery"] #gallery {
         e.preventDefault();
         const delta = e.deltaY < 0 ? 0.15 : -0.15;
         setZoom(zoomLevel + delta);
-        showLightboxUI();
+        if (!hasMouse) showLightboxUI();
       }
     }, { passive: false });
 
@@ -5268,6 +5743,7 @@ body[data-view="gallery"] #gallery {
       lbImg.removeAttribute('src');
       if (lbCurrentItem) { dropUrl(lbCurrentItem); lbCurrentItem = null; }
       activePlaybackFiles = null;
+      if (lbFavDirty) { lbFavDirty = false; renderAlbumSidebar(); applyFilterAndRender(); }
     }
 
     function pauseCurrentVideo() {
@@ -5297,6 +5773,7 @@ body[data-view="gallery"] #gallery {
 
       lbTitle.textContent = current.name;
       lbIndex.textContent = `${currentIndex + 1} / ${activeList.length}`;
+      updateLbFav(current);
       lbContainer.classList.toggle('is-video', current.type === 'video');
 
       if (current.type === 'video') {
@@ -5358,7 +5835,7 @@ body[data-view="gallery"] #gallery {
       if (activeList.length === 0) return;
       currentIndex = (currentIndex + 1) % activeList.length;
       updateLightboxMedia();
-      if (fromUserAction) {
+      if (fromUserAction && !hasMouse) {
         showLightboxUI();
       }
     }
@@ -5368,7 +5845,7 @@ body[data-view="gallery"] #gallery {
       if (activeList.length === 0) return;
       currentIndex = (currentIndex - 1 + activeList.length) % activeList.length;
       updateLightboxMedia();
-      if (fromUserAction) {
+      if (fromUserAction && !hasMouse) {
         showLightboxUI();
       }
     }
@@ -5709,6 +6186,8 @@ body[data-view="gallery"] #gallery {
         toggleHelpModal();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         deleteCurrentItem();
+      } else if (e.key === 'l' || e.key === 'L') {
+        toggleFavItem(getActiveMediaList()[currentIndex]);
       } else if (e.key === 'r' || e.key === 'R') {
         rotateImage();
       } else if (e.key === 'm' || e.key === 'M') {
@@ -6585,7 +7064,8 @@ body[data-view="gallery"] #gallery {
         await deleteAlbumRecords(Array.from(ids));
         albums = albums.filter(a => !ids.has(a.id));
       }
-      if (currentAlbumId !== 'all' && currentAlbumId !== 'unassigned' && !albums.some(a => a.id === currentAlbumId)) {
+      if (currentAlbumId !== 'all' && currentAlbumId !== 'unassigned' && currentAlbumId !== FAV_ID
+          && !(isPlaylistId(currentAlbumId) && getPlaylist(currentAlbumId)) && !albums.some(a => a.id === currentAlbumId)) {
         currentAlbumId = 'all';
       }
     }
@@ -7021,7 +7501,15 @@ body[data-view="gallery"] #gallery {
             <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
           </div>
           <div class="thumb-wrapper">${inner}${badge}</div>
+          <div class="card-fav-btn" title="Yêu thích" aria-label="Yêu thích">
+            <svg viewBox="0 0 24 24"><path d="${HEART_PATH}"/></svg>
+          </div>
         `;
+        if (item.fav) card.classList.add('fav');
+        card.querySelector('.card-fav-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFavItem(item);
+        });
 
         const selectBtn = card.querySelector('.card-select-btn');
         selectBtn.addEventListener('click', (e) => {
