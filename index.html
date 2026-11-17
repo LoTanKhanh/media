@@ -2601,6 +2601,48 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   .lightbox-actions .icon-btn { width: 30px; height: 30px; }
   #lb-speed-btn { height: 30px; padding: 0 4px !important; }
 }
+
+/* ===== iPhone / iPad (cảm ứng): nút xếp dọc cạnh phải, gần ngón cái; 3 nút lọc gộp thành 1 ===== */
+#lb-filter-btn, #lb-filter-exit { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  #lightbox .lightbox-header.ui-hidden { transform: none; }
+  #lightbox .lightbox-header.ui-hidden .lightbox-actions { pointer-events: none; }
+  #lightbox .lightbox-actions {
+    position: fixed; right: max(12px, env(safe-area-inset-right));
+    bottom: calc(env(safe-area-inset-bottom) + 20px);
+    left: auto; top: auto; width: auto; max-height: calc(100vh - 150px);
+    display: flex; flex-direction: column; flex-wrap: nowrap; align-items: flex-end; justify-content: flex-end;
+    gap: 12px !important; z-index: 40;
+  }
+  #lightbox.is-video .lightbox-actions { bottom: calc(env(safe-area-inset-bottom) + 120px); }
+  #lightbox .lightbox-actions .icon-btn {
+    width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+    background: rgba(28, 28, 32, 0.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  }
+  #lightbox .lightbox-actions .icon-btn svg { width: 24px; height: 24px; }
+  #lightbox .lightbox-actions #lb-speed-btn { width: 48px; height: 40px; padding: 0 !important; font-size: 13px; }
+  #lightbox .lightbox-actions .slideshow-group { flex-direction: column; align-items: flex-end; gap: 8px !important; }
+  #lightbox #lb-zoom-box, #lightbox #lb-fullscreen, #lightbox #lb-help-btn { display: none !important; }
+  /* Thứ tự từ trên xuống: Đóng, Xóa, Phát, Xoay, Yêu thích, Lọc ảnh (dễ bấm nhất ở dưới cùng) */
+  #lightbox #lb-video-mode-dropdown { order: 1; }
+  #lightbox #lb-close { order: 2; }
+  #lightbox #lb-delete-current { order: 3; }
+  #lightbox #lb-slideshow-group { order: 4; }
+  #lightbox #lb-rotate { order: 5; }
+  #lightbox #lb-fav { order: 6; }
+  #lightbox #lb-filter-btn { order: 7; display: flex; }
+  /* Menu thả ra bên trái nút */
+  #lightbox .lightbox-actions .dropdown-menu { top: auto; bottom: 0; right: calc(100% + 10px); }
+  /* Mặc định ẩn 3 nút 1/2/3 */
+  #lightbox .lightbox-actions .lb-mark { display: none; }
+  /* Đang lọc: ẩn hết, chỉ còn 3 nút lọc + 1 nút thoát */
+  #lightbox.filter-mode .lightbox-actions > *:not(.lb-mark):not(#lb-filter-exit) { display: none !important; }
+  #lightbox.filter-mode .lightbox-actions .lb-mark { display: flex; order: 1; width: 56px; height: 56px; }
+  #lightbox.filter-mode .lightbox-actions .lb-mark svg { width: 30px; height: 30px; }
+  #lightbox.filter-mode #lb-filter-exit { display: flex; order: 2; width: 72px; height: 44px; margin-top: 8px; font-size: 15px; font-weight: 700; color: #fff; }
+  /* iPhone/iPad: bỏ mũi tên trước/sau, dùng vuốt ngang */
+  #lightbox .nav-btn { display: none !important; }
+}
 </style>
 </head>
 <body>
@@ -3108,6 +3150,12 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         <button id="lb-fullscreen" class="icon-btn" title="Toàn màn hình (F)">
           <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
         </button>
+
+        <!-- Chế độ lọc ảnh (iPhone/iPad): gộp 3 nút 1/2/3 thành 1 nút -->
+        <button id="lb-filter-btn" class="icon-btn" title="Lọc ảnh">
+          <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+        </button>
+        <button id="lb-filter-exit" class="icon-btn" title="Thoát lọc ảnh">Thoát</button>
 
         <!-- Chọn lọc nhanh 1/2/3 -->
         <button id="lb-mark-1" class="icon-btn lb-mark" data-mark="1" title="Giữ (1)">
@@ -4546,6 +4594,14 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     });
     window.addEventListener('click', (e) => {
       if (!e.target.closest('#batch-mark-dropdown')) batchMarkMenu.classList.remove('show');
+    });
+
+    // Chế độ lọc ảnh (iPhone/iPad)
+    document.getElementById('lb-filter-btn').addEventListener('click', (e) => {
+      e.stopPropagation(); lightbox.classList.add('filter-mode'); showLightboxUI();
+    });
+    document.getElementById('lb-filter-exit').addEventListener('click', (e) => {
+      e.stopPropagation(); lightbox.classList.remove('filter-mode');
     });
 
     // Lightbox: nút 1/2/3
@@ -6104,7 +6160,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       helpModal.classList.remove('active');
       if (lbVideoModeMenu) lbVideoModeMenu.classList.remove('show');
       if (lbSpeedMenu) lbSpeedMenu.classList.remove('show');
-      lightbox.classList.remove('active');
+      lightbox.classList.remove('active', 'filter-mode');
       document.body.classList.remove('lb-open');
       lbBody.classList.remove('hide-cursor');
       lbToken++;
@@ -6145,6 +6201,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       updateLbFav(current);
       updateLbMark(current);
       lbContainer.classList.toggle('is-video', current.type === 'video');
+      lightbox.classList.toggle('is-video', current.type === 'video');
 
       if (current.type === 'video') {
         lbImg.style.display = 'none';
