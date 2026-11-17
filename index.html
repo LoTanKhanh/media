@@ -999,7 +999,8 @@
       object-fit: contain;
       transform-origin: center center;
       transition: transform 0.08s ease-out;
-      will-change: transform;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none; user-select: none;
     }
 
     .lightbox-media-container video {
@@ -2547,6 +2548,59 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
 }
 #batch-playlist-menu .dropdown-item { flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ===== Chọn lọc nhanh, File trùng, dropdown thanh bên ===== */
+.section-toggle { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; user-select: none; }
+.section-toggle:hover { color: var(--text-main, #fff); }
+.section-toggle .caret { width: 16px; height: 16px; fill: currentColor; transition: transform .15s ease; }
+.section-toggle.collapsed .caret { transform: rotate(-90deg); }
+.section-toggle.has-active { color: var(--accent); }
+.library-extra { display: flex; flex-direction: column; gap: 3px; }
+.library-extra.is-collapsed, #custom-albums-list.is-collapsed, #album-manage-bar.is-collapsed { display: none !important; }
+.mark-nav-icon.mk-1 { fill: #34c759 !important; }
+.mark-nav-icon.mk-2 { fill: #ff9f0a !important; }
+.mark-nav-icon.mk-3 { fill: #ff453a !important; }
+.card-mark {
+  position: absolute; top: 8px; left: 40px; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; color: #fff; z-index: 10; display: none; pointer-events: none;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.image-card.mark-1 .card-mark, .image-card.mark-2 .card-mark, .image-card.mark-3 .card-mark { display: block; }
+.image-card.mark-1 .card-mark { background: rgba(52,199,89,.9); }
+.image-card.mark-2 .card-mark { background: rgba(255,159,10,.92); }
+.image-card.mark-3 .card-mark { background: rgba(255,69,58,.92); }
+.image-card.mark-1 .card-mark::after { content: 'Giữ'; }
+.image-card.mark-2 .card-mark::after { content: 'Phân vân'; }
+.image-card.mark-3 .card-mark::after { content: 'Loại'; }
+.card-dup {
+  position: absolute; left: 8px; bottom: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  color: #fff; z-index: 10; pointer-events: none; background: hsl(var(--g, 200) 55% 38%);
+}
+.lb-mark { color: #cbd5e1; }
+.lb-mark[data-mark="1"].mark-on { color: #34c759; }
+.lb-mark[data-mark="2"].mark-on { color: #ff9f0a; }
+.lb-mark[data-mark="3"].mark-on { color: #ff453a; }
+.lb-mark.mark-on svg { filter: drop-shadow(0 0 4px currentColor); }
+#batch-mark-menu {
+  top: auto !important; bottom: 100% !important; margin-bottom: 8px; left: 0; right: auto;
+  max-height: 50vh; overflow-y: auto; overflow-x: hidden;
+}
+#batch-mark-menu .dropdown-item { flex-shrink: 0; white-space: nowrap; }
+
+/* Điện thoại: thanh trên của lightbox chia 2 hàng (thông tin / nút) cho đủ chỗ nút đánh dấu, yêu thích */
+@media (max-width: 640px) {
+  .lightbox-header { flex-wrap: wrap; row-gap: 6px; }
+  .lightbox-info { max-width: none !important; flex: 1 1 100%; }
+  .lightbox-actions { width: 100%; justify-content: space-between; flex-wrap: nowrap; gap: 4px !important; }
+  .lightbox-actions .icon-btn { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; }
+  .lightbox-actions .icon-btn svg { width: 18px; height: 18px; }
+  #lb-speed-btn { height: 34px; }
+}
+@media (max-width: 360px) {
+  .lightbox-actions { gap: 2px !important; }
+  .lightbox-actions .icon-btn { width: 30px; height: 30px; }
+  #lb-speed-btn { height: 30px; padding: 0 4px !important; }
+}
 </style>
 </head>
 <body>
@@ -2706,7 +2760,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       <div id="rail-mode-wrap" class="rail-mode-wrap"></div>
       <div class="sidebar-section">
         <div class="sidebar-section-header">
-          <span>Thư viện</span>
+          <span class="section-toggle" id="toggle-library" role="button" tabindex="0" aria-expanded="false" title="Mở / thu gọn Thư viện">Thư viện <svg class="caret" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
           <div style="display:flex;gap:6px;align-items:center;">
             <button id="sidebar-mode-btn" class="icon-only-btn sidebar-mode-toggle" data-tip="Chế độ: Đã ghim (Bấm để chuyển)" title="Chế độ: Đã ghim (Bấm để chuyển)" aria-label="Chế độ: Đã ghim (Bấm để chuyển)">
               <svg viewBox="0 0 24 24"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
@@ -2729,6 +2783,14 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           </div>
           <span class="album-badge" id="badge-count-all">0</span>
         </div>
+        <div class="album-nav-item" id="album-nav-unassigned" data-album-id="unassigned" style="display:none;">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            <span class="album-name">Chưa phân loại</span>
+          </div>
+          <span class="album-badge" id="badge-count-unassigned">0</span>
+        </div>
+        <div id="library-extra" class="library-extra">
         <div class="album-nav-item" id="album-nav-fav" data-album-id="fav">
           <div class="album-item-left">
             <svg viewBox="0 0 24 24" class="fav-nav-icon"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -2736,12 +2798,33 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           </div>
           <span class="album-badge" id="badge-count-fav">0</span>
         </div>
-        <div class="album-nav-item" id="album-nav-unassigned" data-album-id="unassigned" style="display:none;">
+        <div class="album-nav-item" id="album-nav-mk1" data-album-id="mk1">
           <div class="album-item-left">
-            <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-            <span class="album-name">Chưa phân loại</span>
+            <svg viewBox="0 0 24 24" class="mark-nav-icon mk-1"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <span class="album-name">Giữ</span>
           </div>
-          <span class="album-badge" id="badge-count-unassigned">0</span>
+          <span class="album-badge" id="badge-count-mk1">0</span>
+        </div>
+        <div class="album-nav-item" id="album-nav-mk2" data-album-id="mk2">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24" class="mark-nav-icon mk-2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+            <span class="album-name">Phân vân</span>
+          </div>
+          <span class="album-badge" id="badge-count-mk2">0</span>
+        </div>
+        <div class="album-nav-item" id="album-nav-mk3" data-album-id="mk3">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24" class="mark-nav-icon mk-3"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+            <span class="album-name">Loại</span>
+          </div>
+          <span class="album-badge" id="badge-count-mk3">0</span>
+        </div>
+        <div class="album-nav-item" id="album-nav-dups" data-album-id="dups" style="display:none;">
+          <div class="album-item-left">
+            <svg viewBox="0 0 24 24" class=""><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            <span class="album-name">File trùng</span>
+          </div>
+          <span class="album-badge" id="badge-count-dups">0</span>
         </div>
         <div class="album-nav-item" id="album-nav-trash" data-album-id="trash" style="display:none;">
           <div class="album-item-left">
@@ -2757,12 +2840,13 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
             <span class="album-name">Tạo playlist</span>
           </div>
         </div>
+        </div><!-- /library-extra -->
 
       </div>
 
       <div class="sidebar-section">
         <div class="sidebar-section-header">
-          <span>Album của bạn</span>
+          <span class="section-toggle" id="toggle-albums" role="button" tabindex="0" aria-expanded="true" title="Mở / thu gọn Album">Album của bạn <svg class="caret" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
           <div style="display:flex;gap:4px;align-items:center;"><button id="btn-select-albums" class="btn-icon-subtle" data-tip="Chọn nhiều album để xóa" title="Chọn nhiều album để xóa" aria-label="Chọn nhiều album để xóa">
               <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
               <span class="btn-label">Chọn nhiều album để xóa</span>
@@ -2820,6 +2904,14 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
             <svg class="size-icon size-icon-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
           </div>
 
+          <button id="btn-trash-rejected" class="btn btn-danger icon-only-btn" style="display:none;" data-tip="Chuyển cả nhóm Loại vào Thùng rác" title="Chuyển cả nhóm Loại vào Thùng rác" aria-label="Chuyển cả nhóm Loại vào Thùng rác">
+            <svg style="width:15px;height:15px;fill:currentColor;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span class="btn-label touch-label">Chuyển nhóm Loại vào Thùng rác</span>
+          </button>
+          <button id="btn-select-dups" class="btn icon-only-btn" style="display:none;" data-tip="Chọn các bản thừa (giữ lại 1 bản mỗi cụm, ưu tiên tên ngắn nhất)" title="Chọn các bản thừa (giữ lại 1 bản mỗi cụm, ưu tiên tên ngắn nhất)" aria-label="Chọn các bản thừa (giữ lại 1 bản mỗi cụm, ưu tiên tên ngắn nhất)">
+            <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            <span class="btn-label touch-label">Chọn bản thừa</span>
+          </button>
           <button id="btn-play-album" class="btn btn-primary icon-only-btn" style="display:none;" data-tip="Phát tất cả (trình chiếu)" title="Phát tất cả (trình chiếu)" aria-label="Phát tất cả (trình chiếu)">
             <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             <span class="btn-label touch-label">Phát</span>
@@ -2889,6 +2981,15 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
         <span class="btn-label touch-label">Yêu thích</span>
       </button>
+
+      <div class="dropdown" id="batch-mark-dropdown">
+        <button id="btn-batch-mark" class="btn icon-only-btn" data-tip="Đánh dấu Giữ / Phân vân / Loại" title="Đánh dấu Giữ / Phân vân / Loại" aria-label="Đánh dấu Giữ / Phân vân / Loại">
+          <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <span class="btn-label touch-label">Đánh dấu ▾</span>
+          <svg class="dropdown-caret" style="width:11px;height:11px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <div id="batch-mark-menu" class="dropdown-menu" style="min-width:190px;"></div>
+      </div>
 
       <div class="dropdown" id="batch-playlist-dropdown">
         <button id="btn-batch-playlist" class="btn icon-only-btn" data-tip="Thêm các file đã chọn vào playlist" title="Thêm các file đã chọn vào playlist" aria-label="Thêm các file đã chọn vào playlist">
@@ -3008,6 +3109,17 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
         </button>
 
+        <!-- Chọn lọc nhanh 1/2/3 -->
+        <button id="lb-mark-1" class="icon-btn lb-mark" data-mark="1" title="Giữ (1)">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </button>
+        <button id="lb-mark-2" class="icon-btn lb-mark" data-mark="2" title="Phân vân (2)">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+        </button>
+        <button id="lb-mark-3" class="icon-btn lb-mark" data-mark="3" title="Loại (3)">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+        </button>
+
         <!-- Yêu thích -->
         <button id="lb-fav" class="icon-btn" title="Yêu thích (L)">
           <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -3074,6 +3186,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         <div class="help-row"><kbd>S</kbd> <span>Đổi tốc độ slideshow ảnh</span></div>
         <div class="help-row"><kbd>R</kbd> <span>Xoay ảnh 90 độ</span></div>
         <div class="help-row"><kbd>L</kbd> <span>Thêm / bỏ Yêu thích</span></div>
+        <div class="help-row"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <span>Đánh dấu Giữ / Phân vân / Loại (bấm lại để bỏ)</span></div>
         <div class="help-row"><kbd>F</kbd> <span>Bật / Tắt toàn màn hình</span></div>
         <div class="help-row"><kbd>H</kbd> <span>Ẩn / Hiện thanh công cụ</span></div>
         <div class="help-row"><kbd>M</kbd> <span>Đổi chế độ lặp / phát video (4 chế độ)</span></div>
@@ -3512,6 +3625,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       if (item.thumbBlob) m.thumb = item.thumbBlob;
       if (item.thumbFailed) m.thumbFailed = true;
       if (item.fav) m.fav = true;
+      if (item.mark) m.mark = item.mark;
       if (item.linked) { m.linked = true; m.path = item.path; }
       if (item.trashed) { m.trashed = true; m.trashPath = item.trashPath; }
       return m;
@@ -3525,6 +3639,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         thumbUrl: m.thumb ? URL.createObjectURL(m.thumb) : null,
         thumbFailed: !!m.thumbFailed,
         fav: !!m.fav,
+        mark: m.mark || 0,
         linked: !!m.linked, path: m.path || null,
         trashed: !!m.trashed, trashPath: m.trashPath || null,
         url: null, _blob: null
@@ -4098,6 +4213,101 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     };
     let lbFavDirty = false;
 
+    // ---- Chọn lọc nhanh: 1 = Giữ, 2 = Phân vân, 3 = Loại ----
+    const MARKS = {
+      1: { id: 'mk1', name: 'Giữ', path: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z' },
+      2: { id: 'mk2', name: 'Phân vân', path: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z' },
+      3: { id: 'mk3', name: 'Loại', path: 'M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z' }
+    };
+    const DUPS_ID = 'dups';
+    const DUP_PATH = 'M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z';
+    const btnTrashRejected = document.getElementById('btn-trash-rejected');
+    const btnSelectDups = document.getElementById('btn-select-dups');
+    const btnBatchMark = document.getElementById('btn-batch-mark');
+    const batchMarkMenu = document.getElementById('batch-mark-menu');
+    const batchMarkDropdown = document.getElementById('batch-mark-dropdown');
+    const toggleLibrary = document.getElementById('toggle-library');
+    const toggleAlbums = document.getElementById('toggle-albums');
+    const libraryExtra = document.getElementById('library-extra');
+    const dupsNav = document.getElementById('album-nav-dups');
+    const VIEW_INFO = {
+      1: { t: 'Chưa có file nào được Giữ', d: 'Đang xem ảnh, bấm phím 1 để đánh dấu Giữ. Hoặc chọn nhiều file rồi bấm Đánh dấu ở thanh dưới.' },
+      2: { t: 'Chưa có file nào Phân vân', d: 'Đang xem ảnh, bấm phím 2 để đánh dấu Phân vân. Hoặc chọn nhiều file rồi bấm Đánh dấu ở thanh dưới.' },
+      3: { t: 'Chưa có file nào bị Loại', d: 'Đang xem ảnh, bấm phím 3 để đánh dấu Loại. Hoặc chọn nhiều file rồi bấm Đánh dấu ở thanh dưới.' }
+    };
+    function markOfView(id) {
+      if (id === 'mk1') return 1;
+      if (id === 'mk2') return 2;
+      if (id === 'mk3') return 3;
+      return 0;
+    }
+    function isVirtualView(id) {
+      return id === FAV_ID || id === DUPS_ID || !!markOfView(id) || isPlaylistId(id);
+    }
+
+    // File trùng = cùng loại (ảnh/video) và cùng dung lượng chính xác
+    function computeDups() {
+      const buckets = new Map();
+      rawFiles.forEach(f => {
+        if (f._deleted || !f.size) return;
+        const k = f.type + '|' + f.size;
+        if (!buckets.has(k)) buckets.set(k, []);
+        buckets.get(k).push(f);
+      });
+      const groups = Array.from(buckets.values()).filter(g => g.length >= 2);
+      groups.sort((a, b) => (b[0].size - a[0].size));
+      const order = new Map();
+      const group = new Map();
+      let idx = 0;
+      groups.forEach((g, gi) => {
+        g.sort((a, b) => (a.name.length - b.name.length) || a.name.localeCompare(b.name, undefined, { numeric: true }));
+        g.forEach(f => { order.set(f.key, idx++); group.set(f.key, gi + 1); });
+      });
+      return { order, group, groups, count: idx };
+    }
+
+    function updateLbMark(item) {
+      document.querySelectorAll('.lb-mark').forEach(btn => {
+        btn.classList.toggle('mark-on', !!item && item.mark === parseInt(btn.dataset.mark, 10));
+      });
+    }
+
+    async function setMark(items, n) {
+      const changed = items.filter(i => (i.mark || 0) !== n);
+      if (changed.length === 0) return 0;
+      changed.forEach(i => { i.mark = n || 0; });
+      const r = await saveItemsMeta(changed.filter(i => i._saved !== false));
+      if (r && r.ok === false) showToast('Không lưu được đánh dấu: ' + describeDbError(r.error), true);
+      changed.forEach(i => {
+        const el = cardEls.get(i.key);
+        if (el) {
+          el.classList.remove('mark-1', 'mark-2', 'mark-3');
+          if (i.mark) el.classList.add('mark-' + i.mark);
+        }
+      });
+      if (lightbox.classList.contains('active')) {
+        updateLbMark(getActiveMediaList()[currentIndex]);
+        if (markOfView(currentAlbumId)) lbFavDirty = true;
+        renderAlbumSidebar();
+      } else {
+        renderAlbumSidebar();
+        if (markOfView(currentAlbumId)) applyFilterAndRender();
+      }
+      updateFavPlUI();
+      return changed.length;
+    }
+
+    async function toggleMarkItem(item, n) {
+      if (!item) return;
+      if (item.mark === n) {
+        await setMark([item], 0);
+        showToast('Đã bỏ đánh dấu');
+      } else {
+        await setMark([item], n);
+        showToast('Đã đánh dấu: ' + MARKS[n].name);
+      }
+    }
+
     function isPlaylistId(id) { return typeof id === 'string' && id.indexOf('pl_') === 0; }
     function getPlaylist(id) { return playlists.find(pl => pl.id === id) || null; }
     function playlistItems(pl) {
@@ -4165,6 +4375,15 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     function renderPlaylistNav() {
       badgeCountFav.textContent = rawFiles.filter(f => f.fav).length;
       albumNavFav.classList.toggle('active', currentAlbumId === FAV_ID);
+      [1, 2, 3].forEach(n => {
+        document.getElementById('badge-count-mk' + n).textContent = rawFiles.filter(f => f.mark === n).length;
+        document.getElementById('album-nav-mk' + n).classList.toggle('active', currentAlbumId === MARKS[n].id);
+      });
+      const dupCount = computeDups().count;
+      document.getElementById('badge-count-dups').textContent = dupCount;
+      dupsNav.classList.toggle('active', currentAlbumId === DUPS_ID);
+      dupsNav.style.display = (dupCount > 0 || currentAlbumId === DUPS_ID) ? '' : 'none';
+      applySectionStates();
       playlistNavList.innerHTML = '';
       playlists.forEach(pl => {
         const n = playlistItems(pl).length;
@@ -4211,9 +4430,14 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       const inFav = currentAlbumId === FAV_ID;
       const pl = isPlaylistId(currentAlbumId) ? getPlaylist(currentAlbumId) : null;
       const inTrash = currentAlbumId === 'trash';
-      const special = inFav || !!pl;
+      const mkView = markOfView(currentAlbumId);
+      const inDups = currentAlbumId === DUPS_ID;
+      const special = inFav || !!pl || !!mkView || inDups;
       btnClearAll.style.display = special ? 'none' : '';
-      btnPlayAlbum.style.display = special ? '' : 'none';
+      btnPlayAlbum.style.display = (inFav || !!pl || !!mkView) ? '' : 'none';
+      btnTrashRejected.style.display = mkView === 3 ? '' : 'none';
+      btnSelectDups.style.display = inDups ? '' : 'none';
+      batchMarkDropdown.style.display = inTrash ? 'none' : '';
       btnBatchUnplaylist.style.display = pl ? '' : 'none';
       batchPlaylistDropdown.style.display = inTrash ? 'none' : '';
       btnBatchFav.style.display = inTrash ? 'none' : '';
@@ -4226,6 +4450,14 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         t.textContent = 'Chưa có file yêu thích';
         d.textContent = 'Rê chuột vào ảnh/video rồi bấm hình trái tim, hoặc chọn nhiều file rồi bấm nút Yêu thích ở thanh dưới.';
         fb.style.display = 'none';
+      } else if (mkView) {
+        t.textContent = VIEW_INFO[mkView].t;
+        d.textContent = VIEW_INFO[mkView].d;
+        fb.style.display = 'none';
+      } else if (inDups) {
+        t.textContent = 'Không có file trùng';
+        d.textContent = 'Không có file nào cùng loại và cùng dung lượng với file khác.';
+        fb.style.display = 'none';
       } else if (pl) {
         t.textContent = 'Playlist đang trống';
         d.textContent = 'Chọn file ở "Tất cả file", bấm nút Thêm vào Playlist ở thanh dưới, hoặc kéo file thả vào playlist này.';
@@ -4236,6 +4468,119 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         fb.style.display = '';
       }
     }
+
+    // Mục Giữ / Phân vân / Loại / File trùng
+    [1, 2, 3].forEach(n => {
+      const el = document.getElementById('album-nav-' + MARKS[n].id);
+      el.addEventListener('click', () => {
+        clearSelection();
+        currentAlbumId = MARKS[n].id;
+        renderAlbumSidebar();
+        applyFilterAndRender();
+      });
+      setupAlbumDropTarget(el, MARKS[n].id);
+    });
+    dupsNav.addEventListener('click', () => {
+      clearSelection();
+      currentAlbumId = DUPS_ID;
+      renderAlbumSidebar();
+      applyFilterAndRender();
+    });
+
+    // Dropdown Thư viện / Album
+    let libOpen = false, albOpen = true;
+    try {
+      libOpen = localStorage.getItem('mv_lib_open') === '1';
+      albOpen = localStorage.getItem('mv_alb_open') !== '0';
+    } catch (e) {}
+    function applySectionStates() {
+      libraryExtra.classList.toggle('is-collapsed', !libOpen);
+      toggleLibrary.classList.toggle('collapsed', !libOpen);
+      toggleLibrary.setAttribute('aria-expanded', String(libOpen));
+      const inGroup = currentAlbumId === FAV_ID || currentAlbumId === DUPS_ID || currentAlbumId === 'trash'
+        || !!markOfView(currentAlbumId) || isPlaylistId(currentAlbumId);
+      toggleLibrary.classList.toggle('has-active', !libOpen && inGroup);
+      customAlbumsListEl.classList.toggle('is-collapsed', !albOpen);
+      albumManageBarEl.classList.toggle('is-collapsed', !albOpen);
+      toggleAlbums.classList.toggle('collapsed', !albOpen);
+      toggleAlbums.setAttribute('aria-expanded', String(albOpen));
+    }
+    const customAlbumsListEl = document.getElementById('custom-albums-list');
+    const albumManageBarEl = document.getElementById('album-manage-bar');
+    function bindToggle(el, fn) {
+      el.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+    }
+    bindToggle(toggleLibrary, () => {
+      libOpen = !libOpen;
+      try { localStorage.setItem('mv_lib_open', libOpen ? '1' : '0'); } catch (e) {}
+      applySectionStates();
+    });
+    bindToggle(toggleAlbums, () => {
+      albOpen = !albOpen;
+      try { localStorage.setItem('mv_alb_open', albOpen ? '1' : '0'); } catch (e) {}
+      applySectionStates();
+    });
+
+    // Thanh chọn nhiều: Đánh dấu
+    function updateBatchMarkMenu() {
+      batchMarkMenu.innerHTML = '';
+      [1, 2, 3, 0].forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.innerHTML = n ? `<span>${n === 1 ? '✅' : (n === 2 ? '❓' : '❌')} ${MARKS[n].name}</span>` : '<span>Bỏ đánh dấu</span>';
+        item.addEventListener('click', async () => {
+          batchMarkMenu.classList.remove('show');
+          const items = rawFiles.filter(f => selectedKeys.has(f.key));
+          if (items.length === 0) return;
+          const c = await setMark(items, n);
+          showToast(n ? `Đã đánh dấu ${items.length} file: ${MARKS[n].name}` : `Đã bỏ đánh dấu ${items.length} file`);
+        });
+        batchMarkMenu.appendChild(item);
+      });
+    }
+    btnBatchMark.addEventListener('click', (e) => {
+      e.stopPropagation();
+      updateBatchMarkMenu();
+      batchMarkMenu.classList.toggle('show');
+    });
+    window.addEventListener('click', (e) => {
+      if (!e.target.closest('#batch-mark-dropdown')) batchMarkMenu.classList.remove('show');
+    });
+
+    // Lightbox: nút 1/2/3
+    document.querySelectorAll('.lb-mark').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMarkItem(getActiveMediaList()[currentIndex], parseInt(btn.dataset.mark, 10));
+      });
+    });
+
+    // Chuyển cả nhóm Loại vào Thùng rác
+    btnTrashRejected.addEventListener('click', async () => {
+      const items = rawFiles.filter(f => f.mark === 3);
+      if (items.length === 0) { showToast('Nhóm Loại đang trống'); return; }
+      const nLinked = items.filter(f => f.linked).length;
+      const msg = nLinked
+        ? `Chuyển ${items.length} file nhóm Loại vào Thùng rác (thư mục "${TRASH_NAME}" trong thư mục gốc)?\nCó thể khôi phục lại sau.`
+          + (items.length > nLinked ? `\nCòn ${items.length - nLinked} file đã nạp sẽ bị xóa khỏi app.` : '')
+        : `Xóa ${items.length} file nhóm Loại khỏi app?`;
+      if (!await uiConfirm(msg)) return;
+      const gone = await removeItemsSmart(items);
+      clearSelection();
+      renderAlbumSidebar();
+      applyFilterAndRender();
+      if (gone.size > 0) showToast(`Đã xử lý ${gone.size} file nhóm Loại`);
+    });
+
+    // Chọn các bản thừa: mỗi cụm giữ lại 1 bản (tên ngắn nhất, thường là bản gốc), chọn phần còn lại. Chỉ chọn, chưa xóa gì.
+    btnSelectDups.addEventListener('click', () => {
+      const info = computeDups();
+      let n = 0;
+      info.groups.forEach(g => g.slice(1).forEach(f => { selectedKeys.add(f.key); n++; }));
+      updateSelectionUI();
+      showToast(n ? `Đã chọn ${n} bản thừa (mỗi cụm giữ lại 1 bản). Bấm Xóa ở thanh dưới nếu đúng.` : 'Không có bản thừa');
+    });
 
     albumNavFav.addEventListener('click', () => {
       clearSelection();
@@ -4448,8 +4793,15 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           railWrap.appendChild(itemTrash);
         }
 
-        // Yêu thích + Playlist
+        // Yêu thích + Giữ/Phân vân/Loại + File trùng + Playlist
         railWrap.appendChild(makeRailItem(FAV_ID, 'Yêu thích', rawFiles.filter(f => f.fav).length, HEART_PATH));
+        [1, 2, 3].forEach(n => {
+          railWrap.appendChild(makeRailItem(MARKS[n].id, MARKS[n].name, rawFiles.filter(f => f.mark === n).length, MARKS[n].path));
+        });
+        {
+          const dc = computeDups().count;
+          if (dc > 0 || currentAlbumId === DUPS_ID) railWrap.appendChild(makeRailItem(DUPS_ID, 'File trùng', dc, DUP_PATH));
+        }
         playlists.forEach(pl => {
           railWrap.appendChild(makeRailItem(pl.id, pl.name, playlistItems(pl).length, PLAYLIST_PATH));
         });
@@ -4509,6 +4861,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       }
       const curPl = isPlaylistId(currentAlbumId) ? getPlaylist(currentAlbumId) : null;
       if (curPl) title = curPl.name;
+      if (markOfView(currentAlbumId)) title = MARKS[markOfView(currentAlbumId)].name;
+      if (currentAlbumId === DUPS_ID) title = 'File trùng';
       currentAlbumNameText.textContent = title;
 
       btnRenameAlbum.style.display = (isCustom || curPl) ? 'inline-flex' : 'none';
@@ -4616,6 +4970,13 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
 
     async function moveMediaToAlbum(keys, targetAlbumId) {
       if (!keys || keys.length === 0) return;
+      if (markOfView(targetAlbumId)) {
+        const n = markOfView(targetAlbumId);
+        const its = rawFiles.filter(f => keys.includes(f.key));
+        const c = await setMark(its, n);
+        showToast(c ? `Đã đánh dấu ${c} file: ${MARKS[n].name}` : 'Các file này đã có đánh dấu đó');
+        return;
+      }
       if (targetAlbumId === FAV_ID) {
         const its = rawFiles.filter(f => keys.includes(f.key));
         const n = await setFav(its, true);
@@ -5223,7 +5584,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
 
         // Tự động nhận diện thư mục con
         const subfolder = extractSubfolderName(f);
-        let fileAlbumId = (currentAlbumId !== 'all' && currentAlbumId !== FAV_ID && !isPlaylistId(currentAlbumId)) ? currentAlbumId : 'unassigned';
+        let fileAlbumId = (currentAlbumId !== 'all' && !isVirtualView(currentAlbumId)) ? currentAlbumId : 'unassigned';
 
         if (subfolder && subfolder.trim()) {
           const cleanName = subfolder.trim();
@@ -5315,6 +5676,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       const pool = (currentAlbumId === 'trash') ? trashFiles : rawFiles;
       const viewPl = isPlaylistId(currentAlbumId) ? getPlaylist(currentAlbumId) : null;
       const plOrder = viewPl ? new Map(viewPl.keys.map((k, i) => [k, i])) : null;
+      const viewMark = markOfView(currentAlbumId);
+      const dupInfo = currentAlbumId === DUPS_ID ? computeDups() : null;
       displayedFiles = pool.filter(item => {
         const matchName = item.name.toLowerCase().includes(keyword);
         const matchType = typeChoice === 'all' || item.type === typeChoice;
@@ -5324,6 +5687,10 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           matchAlbum = true;
         } else if (currentAlbumId === FAV_ID) {
           matchAlbum = !!item.fav;
+        } else if (viewMark) {
+          matchAlbum = item.mark === viewMark;
+        } else if (dupInfo) {
+          matchAlbum = dupInfo.order.has(item.key);
         } else if (viewPl) {
           matchAlbum = plOrder.has(item.key);
         } else {
@@ -5333,7 +5700,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         return matchName && matchType && matchAlbum;
       });
 
-      if (plOrder) displayedFiles.sort((a, b) => plOrder.get(a.key) - plOrder.get(b.key));
+      const fixedOrder = plOrder || (dupInfo ? dupInfo.order : null);
+      if (fixedOrder) displayedFiles.sort((a, b) => fixedOrder.get(a.key) - fixedOrder.get(b.key));
       else displayedFiles.sort((a, b) => {
         if (sortType === 'name-asc') return a.name.localeCompare(b.name, undefined, { numeric: true });
         if (sortType === 'name-desc') return b.name.localeCompare(a.name, undefined, { numeric: true });
@@ -5527,6 +5895,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     }
 
     function resetView() {
+      if (typeof stopInertia === 'function') stopInertia();
       zoomLevel = 1;
       panX = 0;
       panY = 0;
@@ -5535,7 +5904,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     }
 
     function setZoom(newZoom) {
-      newZoom = Math.max(0.5, Math.min(newZoom, 5));
+      newZoom = Math.max(0.5, Math.min(newZoom, 8));
       if (newZoom === 1) {
         panX = 0;
         panY = 0;
@@ -5774,6 +6143,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       lbTitle.textContent = current.name;
       lbIndex.textContent = `${currentIndex + 1} / ${activeList.length}`;
       updateLbFav(current);
+      updateLbMark(current);
       lbContainer.classList.toggle('is-video', current.type === 'video');
 
       if (current.type === 'video') {
@@ -5971,6 +6341,29 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     let lastTapY = 0;
     let dblGuardUntil = 0;
     let zoomAnimTimer = null;
+    let inertiaRaf = 0, velX = 0, velY = 0, lastMvT = 0, lastMvX = 0, lastMvY = 0;
+    let holdTimer = 0, holdFired = false;
+    function stopInertia() { if (inertiaRaf) { cancelAnimationFrame(inertiaRaf); inertiaRaf = 0; } }
+    function cancelHold() { clearTimeout(holdTimer); holdTimer = 0; }
+    function startInertia() {
+      stopInertia();
+      if (Math.hypot(velX, velY) < 0.15) return;
+      let last = performance.now();
+      const step = (t) => {
+        const dt = Math.min(32, t - last); last = t;
+        panX += velX * dt; panY += velY * dt;
+        const bx = panX, by = panY;
+        clampPan(zoomLevel);
+        if (panX !== bx) velX = 0;
+        if (panY !== by) velY = 0;
+        const f = Math.pow(0.94, dt / 16.7);
+        velX *= f; velY *= f;
+        updateTransform();
+        if (Math.hypot(velX, velY) < 0.02) { inertiaRaf = 0; return; }
+        inertiaRaf = requestAnimationFrame(step);
+      };
+      inertiaRaf = requestAnimationFrame(step);
+    }
 
     // Kích thước thật của ảnh đang hiển thị (ảnh dùng object-fit: contain trong khung đầy màn hình)
     function lbContentSize() {
@@ -6011,6 +6404,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         e.touches[0].clientY > window.innerHeight - 110;
       touchIgnore = !!(tgt.closest && tgt.closest('button, input, .dropdown-menu, .help-modal')) || onVideoBar;
       if (touchIgnore) return;
+      stopInertia(); cancelHold(); holdFired = false; velX = velY = 0;
       if (e.touches.length === 2) {
         // Bắt đầu chụm 2 ngón tay thu phóng (Pinch-to-zoom)
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -6032,6 +6426,25 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
+        lastMvT = performance.now(); lastMvX = touchStartX; lastMvY = touchStartY;
+        if (!(lbCurrentItem && lbCurrentItem.type === 'video') && zoomLevel <= 1.05) {
+          const hx = touchStartX, hy = touchStartY;
+          holdTimer = setTimeout(() => {
+            holdTimer = 0;
+            const sz = lbContentSize();
+            const z = Math.min(8, (lbImg.naturalWidth / (window.devicePixelRatio || 1)) / (sz.w || 1));
+            if (z < 1.15) return;
+            holdFired = true;
+            const now = Date.now();
+            dblGuardUntil = now + 900; swipeGuardUntil = now + 900;
+            const o = lbBodyCenter();
+            zoomLevel = z;
+            panX = -(hx - o.x) * (z - 1); panY = -(hy - o.y) * (z - 1);
+            clampPan(z);
+            animateToView();
+            if (navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
+          }, 450);
+        }
         if (zoomLevel > 1) {
           touchPanStartX = e.touches[0].clientX - panX;
           touchPanStartY = e.touches[0].clientY - panY;
@@ -6041,6 +6454,9 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
 
     lbBody.addEventListener('touchmove', (e) => {
       if (touchIgnore) return;
+      if (holdTimer && e.touches.length === 1 &&
+          Math.hypot(e.touches[0].clientX - touchStartX, e.touches[0].clientY - touchStartY) > 10) cancelHold();
+      if (e.touches.length === 2) cancelHold();
       if (e.touches.length === 2 && touchPinchDist > 0) {
         // Thu phóng bằng 2 ngón tay
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -6049,7 +6465,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         const currentDist = Math.hypot(dx, dy);
         const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        const z = Math.max(0.5, Math.min(5, pinch.z0 * currentDist / pinch.d0));
+        const z = Math.max(0.5, Math.min(8, pinch.z0 * currentDist / pinch.d0));
         const k = z / pinch.z0;
         // Điểm ảnh dưới 2 ngón lúc bắt đầu chụm luôn nằm dưới trung điểm 2 ngón hiện tại
         panX = mx - pinch.ox - k * (pinch.mx0 - pinch.ox - pinch.px0);
@@ -6060,11 +6476,19 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         // Kéo di chuyển ảnh khi đã phóng to
         panX = e.touches[0].clientX - touchPanStartX;
         panY = e.touches[0].clientY - touchPanStartY;
+        const nt = performance.now(), dt = nt - lastMvT;
+        if (dt > 0) {
+          const ix = (e.touches[0].clientX - lastMvX) / dt, iy = (e.touches[0].clientY - lastMvY) / dt;
+          velX = velX * 0.5 + ix * 0.5; velY = velY * 0.5 + iy * 0.5;
+        }
+        lastMvT = nt; lastMvX = e.touches[0].clientX; lastMvY = e.touches[0].clientY;
         updateTransform();
       }
     }, { passive: true });
 
     lbBody.addEventListener('touchend', (e) => {
+      cancelHold();
+      if (holdFired && e.touches.length === 0) { holdFired = false; return; }
       if (e.touches.length < 2) {
         touchPinchDist = 0;
       }
@@ -6083,6 +6507,10 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         return;
       }
       if (touchIgnore) return;
+      if (e.touches.length === 0 && zoomLevel > 1.05 && performance.now() - lastMvT < 80) {
+        const pdx = e.changedTouches[0].clientX - touchStartX, pdy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.hypot(pdx, pdy) > 12) startInertia();
+      }
       if (e.changedTouches.length === 1) {
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
@@ -6186,6 +6614,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         toggleHelpModal();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         deleteCurrentItem();
+      } else if (e.key === '1' || e.key === '2' || e.key === '3') {
+        toggleMarkItem(getActiveMediaList()[currentIndex], parseInt(e.key, 10));
       } else if (e.key === 'l' || e.key === 'L') {
         toggleFavItem(getActiveMediaList()[currentIndex]);
       } else if (e.key === 'r' || e.key === 'R') {
@@ -7065,6 +7495,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         albums = albums.filter(a => !ids.has(a.id));
       }
       if (currentAlbumId !== 'all' && currentAlbumId !== 'unassigned' && currentAlbumId !== FAV_ID
+          && !markOfView(currentAlbumId) && currentAlbumId !== DUPS_ID
           && !(isPlaylistId(currentAlbumId) && getPlaylist(currentAlbumId)) && !albums.some(a => a.id === currentAlbumId)) {
         currentAlbumId = 'all';
       }
@@ -7480,6 +7911,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     // (a) Kiểu Lưới
     function renderGridView() {
       const frag = document.createDocumentFragment();
+      const dupGroupOf = currentAlbumId === DUPS_ID ? computeDups().group : null;
       displayedFiles.forEach((item, idx) => {
         const card = document.createElement('div');
         card.className = 'image-card' + (selectedKeys.has(item.key) ? ' selected' : '');
@@ -7506,6 +7938,12 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           </div>
         `;
         if (item.fav) card.classList.add('fav');
+        if (item.mark) card.classList.add('mark-' + item.mark);
+        card.insertAdjacentHTML('beforeend', '<div class="card-mark" aria-hidden="true"></div>');
+        if (dupGroupOf && dupGroupOf.has(item.key)) {
+          const gn = dupGroupOf.get(item.key);
+          card.insertAdjacentHTML('beforeend', `<div class="card-dup" style="--g:${(gn * 47) % 360}">Trùng #${gn}</div>`);
+        }
         card.querySelector('.card-fav-btn').addEventListener('click', (e) => {
           e.stopPropagation();
           toggleFavItem(item);
