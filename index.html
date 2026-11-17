@@ -2608,6 +2608,24 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
 #sidebar-mode-btn.sidebar-mode-toggle.active { background: rgba(59,130,246,.22); border-color: #3b82f6; color: #60a5fa; }
 @media (hover: none) and (pointer: coarse) and (min-width: 700px) {
   body.sidebar-pinned-touch .app-layout { margin-left: 280px; }
+  body.sidebar-rail-touch .app-layout { margin-left: 64px; }
+  body.sidebar-pinned-touch #sidebar-edge-tab { display: none !important; }
+  body.sidebar-rail-touch #album-sidebar.sidebar-overlay.pinned {
+    width: 64px !important; min-width: 64px !important; max-width: 64px !important;
+    padding: 10px 6px !important; overflow-x: hidden !important;
+  }
+  body.sidebar-rail-touch #album-sidebar .sidebar-section,
+  body.sidebar-rail-touch #album-sidebar .sidebar-resizer { display: none !important; }
+  body.sidebar-rail-touch .rail-mode-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+  body.sidebar-rail-touch .rail-item {
+    width: 44px; height: 44px; border-radius: 10px; background: var(--card-bg);
+    border: 1px solid var(--border-color); color: var(--text-sub);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; position: relative;
+  }
+  body.sidebar-rail-touch .rail-item svg { width: 20px; height: 20px; fill: currentColor; pointer-events: none; }
+  body.sidebar-rail-touch .rail-item.active { background: rgba(10,132,255,.18); border-color: var(--accent); color: var(--accent); }
+  /* iPad: hiện lại nút toàn màn hình */
+  #lightbox #lb-fullscreen { display: flex !important; order: 0; }
   #album-sidebar.sidebar-overlay.pinned {
     top: var(--topbar-height) !important;
     height: calc(100vh - var(--topbar-height)) !important;
@@ -2646,7 +2664,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
   #lightbox .lightbox-actions .icon-btn svg { width: 24px; height: 24px; }
   #lightbox .lightbox-actions #lb-speed-btn { width: 48px; height: 40px; padding: 0 !important; font-size: 13px; }
   #lightbox .lightbox-actions .slideshow-group { flex-direction: column; align-items: flex-start; gap: 8px !important; }
-  #lightbox #lb-zoom-box, #lightbox #lb-fullscreen, #lightbox #lb-help-btn { display: none !important; }
+  #lightbox #lb-zoom-box, #lightbox #lb-help-btn { display: none !important; }
+  @media (max-width: 699px) { #lightbox #lb-fullscreen { display: none !important; } }
   /* Thứ tự từ trên xuống: Đóng, Xóa, Phát, Xoay, Yêu thích, Lọc ảnh (dễ bấm nhất ở dưới cùng) */
   #lightbox #lb-video-mode-dropdown { order: 1; }
   #lightbox #lb-close { order: 2; }
@@ -5524,6 +5543,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
           document.documentElement.requestFullscreen().catch(() => {});
         } else if (document.documentElement.webkitRequestFullscreen) {
           document.documentElement.webkitRequestFullscreen();
+        } else {
+          showToast('Máy này không hỗ trợ toàn màn hình');
         }
       } else {
         if (document.exitFullscreen) {
@@ -6907,8 +6928,20 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       } catch (err) {}
 
       let hideTimer = null;
-      let touchPinned = false;
-      try { touchPinned = localStorage.getItem('mv_touch_pin') === '1'; } catch (err) {}
+      let touchMode = 'off'; // off = lớp phủ | full = ghim đầy đủ | rail = ghim dải bìa album
+      try {
+        const tm = localStorage.getItem('mv_touch_mode');
+        if (tm === 'full' || tm === 'rail' || tm === 'off') touchMode = tm;
+        else if (localStorage.getItem('mv_touch_pin') === '1') touchMode = 'full';
+      } catch (err) {}
+      function setTouchMode(m) {
+        touchMode = m;
+        try { localStorage.setItem('mv_touch_mode', m); } catch (err) {}
+        sidebar.classList.remove('show');
+        backdrop?.classList.remove('show');
+        setSidebarMode(currentMode);
+        showToast(m === 'full' ? 'Ghim thanh bên: đầy đủ' : (m === 'rail' ? 'Ghim thanh bên: chỉ hiện bìa album' : 'Đã bỏ ghim thanh bên'));
+      }
 
       function isTouchWide() { return !isDesktop() && window.innerWidth >= 700; }
 
@@ -6944,14 +6977,15 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
 
         // Điện thoại/máy cảm ứng: thanh bên là lớp phủ trượt (cần class sidebar-overlay)
         sidebar.classList.toggle('sidebar-overlay', !isDesktop());
-        const docked = !isDesktop() && isTouchWide() && touchPinned;
+        const docked = !isDesktop() && isTouchWide() && touchMode !== 'off';
         document.body.classList.toggle('sidebar-pinned-touch', docked);
+        document.body.classList.toggle('sidebar-rail-touch', docked && touchMode === 'rail');
         if (!isDesktop() && modeBtn) {
           // iPad: nút này ghim / bỏ ghim. iPhone quá hẹp nên ẩn nút.
           modeBtn.style.display = isTouchWide() ? '' : 'none';
-          modeBtn.innerHTML = MODE_ICONS.pinned + '<span class="btn-label">Ghim thanh bên</span>';
+          modeBtn.innerHTML = (touchMode === 'rail' ? MODE_ICONS.rail : MODE_ICONS.pinned) + '<span class="btn-label">Ghim thanh bên</span>';
           modeBtn.classList.toggle('active', docked);
-          setBtnLabel(modeBtn, docked ? 'Đang ghim (bấm để bỏ ghim)' : 'Ghim thanh bên');
+          setBtnLabel(modeBtn, touchMode === 'full' ? 'Đang ghim đầy đủ (bấm: chỉ hiện bìa album)' : (touchMode === 'rail' ? 'Đang ghim dải bìa (bấm: bỏ ghim)' : 'Ghim thanh bên'));
         } else if (modeBtn) {
           modeBtn.style.display = '';
           modeBtn.classList.remove('active');
@@ -6988,12 +7022,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       cycleSidebarMode = function() {
         if (!isDesktop()) {
           if (!isTouchWide()) return;
-          touchPinned = !touchPinned;
-          try { localStorage.setItem('mv_touch_pin', touchPinned ? '1' : '0'); } catch (err) {}
-          sidebar.classList.remove('show');
-          backdrop?.classList.remove('show');
-          setSidebarMode(currentMode);
-          showToast(touchPinned ? 'Đã ghim thanh bên' : 'Đã bỏ ghim thanh bên');
+          setTouchMode(touchMode === 'off' ? 'full' : (touchMode === 'full' ? 'rail' : 'off'));
           return;
         }
         const modes = ['pinned', 'auto', 'rail'];
@@ -7174,7 +7203,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       backdrop?.addEventListener('click', () => closeSidebar(true));
       closeBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (document.body.classList.contains('sidebar-pinned-touch')) { cycleSidebarMode(); return; }
+        if (document.body.classList.contains('sidebar-pinned-touch')) { setTouchMode('off'); return; }
         closeSidebar(true);
       });
       modeBtn?.addEventListener('click', (e) => {
