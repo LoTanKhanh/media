@@ -3022,6 +3022,11 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       <span id="batch-text">Đã chọn 0 file</span>
     </div>
     <div class="batch-actions">
+      <button id="btn-batch-all" class="btn icon-only-btn" data-tip="Chọn tất cả ảnh đang hiển thị" title="Chọn tất cả ảnh đang hiển thị" aria-label="Chọn tất cả">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2zM9 17h6V7H9v10zm2-8h2v6h-2V9z"/></svg>
+        <span class="btn-label touch-label">Chọn tất cả</span>
+      </button>
+
       <button id="btn-batch-play" class="btn btn-primary icon-only-btn" style="display:none;" data-tip="Phát các file đang chọn" title="Phát các file đang chọn" aria-label="Phát các file đang chọn">
         <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         <span class="btn-label touch-label">Phát các file đã chọn</span>
@@ -5104,6 +5109,14 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       }
       updateSelectionUI();
     }
+
+    document.getElementById('btn-batch-all').addEventListener('click', () => {
+      const all = displayedFiles.length > 0 && displayedFiles.every(f => selectedKeys.has(f.key));
+      if (all) { clearSelection(); return; }
+      displayedFiles.forEach(f => selectedKeys.add(f.key));
+      updateSelectionUI();
+      showToast(`Đã chọn ${displayedFiles.length} file`);
+    });
 
     function clearSelection() {
       selectedKeys.clear();
