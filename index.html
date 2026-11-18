@@ -3772,6 +3772,8 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
     }
 
     function isUnassigned(f) { return !f.albumId || f.albumId === 'unassigned'; }
+    // Mục "Chưa phân loại" = ảnh chưa được lọc (chưa đánh dấu Giữ / Phân vân / Loại)
+    function isUnsorted(f) { return !f.mark; }
 
     // Lưu file mới theo từng nhóm nhỏ; trả về { ok, savedCount, error }
     async function saveNewItems(items, onProgress) {
@@ -4815,7 +4817,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
       const countAll = rawFiles.length;
       badgeCountAll.textContent = countAll;
       albumNavAll.classList.toggle('active', currentAlbumId === 'all');
-      const countUnassigned = rawFiles.filter(isUnassigned).length;
+      const countUnassigned = rawFiles.filter(isUnsorted).length;
       badgeCountUnassigned.textContent = countUnassigned;
       albumNavUnassigned.classList.toggle('active', currentAlbumId === 'unassigned');
       albumNavUnassigned.style.display = (countUnassigned > 0 || currentAlbumId === 'unassigned') ? '' : 'none';
@@ -5502,7 +5504,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
 
       // Đang ở một album: chỉ xóa file của album này, album khác giữ nguyên
       const album = albums.find(a => a.id === currentAlbumId);
-      const targets = rawFiles.filter(f => currentAlbumId === 'unassigned' ? isUnassigned(f) : f.albumId === currentAlbumId);
+      const targets = rawFiles.filter(f => currentAlbumId === 'unassigned' ? isUnsorted(f) : f.albumId === currentAlbumId);
       if (targets.length === 0) { showToast('Album này đang trống'); return; }
       const albumName = album ? album.name : 'Chưa phân loại';
       const nLinkedT = targets.filter(f => f.linked).length;
@@ -5841,7 +5843,7 @@ body.header-hidden { --topbar-height: env(safe-area-inset-top, 0px); }
         } else if (viewPl) {
           matchAlbum = plOrder.has(item.key);
         } else {
-          matchAlbum = (currentAlbumId === 'unassigned') ? isUnassigned(item) : (item.albumId === currentAlbumId);
+          matchAlbum = (currentAlbumId === 'unassigned') ? isUnsorted(item) : (item.albumId === currentAlbumId);
         }
 
         return matchName && matchType && matchAlbum;
